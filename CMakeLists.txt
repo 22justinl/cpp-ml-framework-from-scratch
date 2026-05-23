@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Main library
 add_library(cpp_ml_from_scratch
     src/core/value.cpp
+    src/core/tensor.cpp
 )
 
 target_include_directories(cpp_ml_from_scratch PUBLIC
@@ -16,7 +17,9 @@ target_include_directories(cpp_ml_from_scratch PUBLIC
 
 # Tests
 add_executable(tests
+    tests/test_main.cpp
     tests/test_value.cpp
+    tests/test_tensor.cpp
 )
 
 target_include_directories(tests PRIVATE
