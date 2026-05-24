@@ -149,75 +149,31 @@ Tensor Tensor::div(const Tensor& a, const Tensor& b) const {
     return res;
 }
 
-Tensor Tensor::matmul(const Tensor& a, const Tensor& b) {
-    // TODO: nD matmul
-    if (a.shape_.size() != 2 || b.shape_.size() != 2) {
-        throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
-    }
-    if (a.shape_[a.shape_.size()-1] != b.shape_[0]) {
-        throw std::runtime_error("Cannot matrix multiply tensors with shapes " + a.shape_string() + " and " + b.shape_string());
-    }
-    Tensor res(0.f, {a.shape_[0], b.shape_[1]});
-    for (size_t i = 0; i < a.shape_[0]; ++i) {
-        for (size_t j = 0; j < b.shape_[1]; ++j) {
-            for (size_t k = 0; k < a.shape_[1]; ++k) {
-                res({i, j}) += a({i, k}) * b({k, j});
-            }
-        }
-    }
-    return res;
-}
-Tensor Tensor::matvec(const Tensor& a, const Tensor& b) {
-    // Expect 2D Tensor and 1D Tensor or 2D column Tensor
-    if (a.shape_.size() != 2 || (b.shape_.size() != 1 && !(b.shape_.size() == 2 && b.shape_[1] == 1))) {
-        throw std::runtime_error("Matrix vector multiplication expects 2D Tensor with 1D Tensor or 2D column Tensor, instead got " + a.shape_string() + " and " + b.shape_string());
-    }
-    if (a.shape_[1] != b.data_.size()) {
-        throw std::runtime_error("Cannot matrix multiply tensors with shapes " + a.shape_string() + " and " + b.shape_string());
-    }
-    Tensor res(0.f, {a.shape_[0], 1});
-    for (size_t i = 0; i < a.shape_[0]; ++i) {
-        for (size_t j = 0; j < a.shape_[1]; ++j) {
-            res.data_[i] += a({i, j})*b.data_[j];
-        }
-    }
-    return res;
-}
-
-Tensor Tensor::dot(const Tensor& a, const Tensor& b) {
-    float res = 0.f;
-    if (a.shape_.size() == 0 && b.shape_.size() == 0) {
-        return Tensor({res}, {1});
-    }
-    // a and b 1D tensors
-    if (a.shape_.size() == 1 && b.shape_.size() == 1 && a.shape_[0] == b.shape_[0]) {
-        for (size_t i = 0; i < a.shape_[0]; ++i) {
-            res += a.data_[i] * b.data_[i];
-        }
-        return Tensor({res}, {1});
-    }
-    // a and b 2D tensors
-    if (    (a.shape_.size() == 2 && b.shape_.size() == 2) &&
-            ((a.shape_[0] == 1 && b.shape_[0] == 1 && a.shape_[1] == b.shape_[1]) ||
-             (a.shape_[1] == 1 && b.shape_[1] == 1 && a.shape_[0] == b.shape_[0]))
-        ) {
-        for (size_t i = 0; i < a.data_.size(); ++i) {
-            res += a.data_[i] * b.data_[i];
-        }
-        return Tensor({res}, {1});
-    }
-    throw std::runtime_error("Cannot dot product tensors with shapes " + a.shape_string() + " and " + b.shape_string());
-}
-
-const std::vector<float> Tensor::data_raw() const { return data_; }
-const std::vector<float> Tensor::grad_raw() const { return grad_; }
-const std::vector<size_t> Tensor::shape() const { return shape_; }
-const std::vector<size_t> Tensor::strides_raw() const { return strides_; }
+const std::vector<float>& Tensor::data_raw() const { return data_; }
+const std::vector<float>& Tensor::grad_raw() const { return grad_; }
+const std::vector<size_t>& Tensor::shape() const { return shape_; }
+const std::vector<size_t>& Tensor::strides_raw() const { return strides_; }
+std::vector<float>& Tensor::data_raw() { return data_; }
+std::vector<float>& Tensor::grad_raw() { return grad_; }
+std::vector<size_t>& Tensor::shape() { return shape_; }
+std::vector<size_t>& Tensor::strides_raw() { return strides_; }
 
 void Tensor::zero_grad() {
     for (size_t i = 0; i < data_.size(); ++i) {
         grad_[i] = 0;
     }
+}
+
+std::string Tensor::shape_string() const {
+    if (shape_.size() == 0) {
+        return "()";
+    }
+    std::string s = "(";
+    for (size_t i = 0; i < shape_.size()-1; ++i) {
+        s += std::to_string(shape_[i]) + ", ";
+    }
+    s += std::to_string(shape_[shape_.size()-1]) + ")";
+    return s;
 }
 
 // Private functions
@@ -246,16 +202,4 @@ std::vector<size_t> Tensor::calculate_strides(std::vector<size_t> tensor_shape) 
         strides[i] = strides[i+1] * tensor_shape[i+1];
     }
     return strides;
-}
-
-std::string Tensor::shape_string() const {
-    if (shape_.size() == 0) {
-        return "()";
-    }
-    std::string s = "(";
-    for (size_t i = 0; i < shape_.size()-1; ++i) {
-        s += std::to_string(shape_[i]) + ", ";
-    }
-    s += std::to_string(shape_[shape_.size()-1]) + ")";
-    return s;
 }

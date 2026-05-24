@@ -29,16 +29,18 @@ public:
     Tensor mul(const Tensor& a, const Tensor& b) const;
     Tensor div(const Tensor& a, const Tensor& b) const;
 
-    static Tensor matmul(const Tensor& a, const Tensor& b); // (m, n)(n, l)
-    static Tensor matvec(const Tensor& a, const Tensor& b); // (m, n)(n) or (m, n)(n, 1)
-    static Tensor dot(const Tensor& a, const Tensor& b);    // (n)(n) or (n,1)(n,1) or (1,n)(1,n)
-
-    const std::vector<float> data_raw() const;
-    const std::vector<float> grad_raw() const;
-    const std::vector<size_t> shape() const;
-    const std::vector<size_t> strides_raw() const;
-
     void zero_grad();
+
+    std::string shape_string() const;
+
+    const std::vector<float>& data_raw() const;
+    const std::vector<float>& grad_raw() const;
+    const std::vector<size_t>& shape() const;
+    const std::vector<size_t>& strides_raw() const;
+    std::vector<float>& data_raw();
+    std::vector<float>& grad_raw();
+    std::vector<size_t>& shape();
+    std::vector<size_t>& strides_raw();
 private:
     std::vector<float> data_;
     std::vector<float> grad_;
@@ -47,5 +49,4 @@ private:
 
     bool check_shape_match(Tensor t1, Tensor t2) const;
     std::vector<size_t> calculate_strides(std::vector<size_t> tensor_shape);
-    std::string shape_string() const;
 };
