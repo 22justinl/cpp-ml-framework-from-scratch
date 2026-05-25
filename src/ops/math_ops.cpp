@@ -1,4 +1,65 @@
 #include "ops/math_ops.h"
+#include "utils/tensor_utils.h"
+
+Tensor add(const Tensor& a, const Tensor& b) {
+    if (!check_tensor_shape_match(a, b)) {
+        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
+    }
+    Tensor res = Tensor(0, a.shape());
+    const std::vector<float>& a_data = a.data_raw();
+    const std::vector<float>& b_data = b.data_raw();
+    std::vector<float>& res_data = res.data_raw();
+
+    for (size_t i = 0; i < a_data.size(); ++i) {
+        res_data[i] = a_data[i] + b_data[i];
+    }
+    return res;
+}
+Tensor sub(const Tensor& a, const Tensor& b) {
+    if (!check_tensor_shape_match(a, b)) {
+        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
+    }
+    Tensor res = Tensor(0, a.shape());
+    const std::vector<float>& a_data = a.data_raw();
+    const std::vector<float>& b_data = b.data_raw();
+    std::vector<float>& res_data = res.data_raw();
+
+    for (size_t i = 0; i < a_data.size(); ++i) {
+        res_data[i] = a_data[i] - b_data[i];
+    }
+    return res;
+}
+Tensor mul(const Tensor& a, const Tensor& b) {
+    if (!check_tensor_shape_match(a, b)) {
+        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
+    }
+    Tensor res = Tensor(0, a.shape());
+    const std::vector<float>& a_data = a.data_raw();
+    const std::vector<float>& b_data = b.data_raw();
+    std::vector<float>& res_data = res.data_raw();
+
+    for (size_t i = 0; i < a_data.size(); ++i) {
+        res_data[i] = a_data[i] * b_data[i];
+    }
+    return res;
+}
+Tensor div(const Tensor& a, const Tensor& b) {
+    if (!check_tensor_shape_match(a, b)) {
+        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
+    }
+    Tensor res = Tensor(0, a.shape());
+    const std::vector<float>& a_data = a.data_raw();
+    const std::vector<float>& b_data = b.data_raw();
+    std::vector<float>& res_data = res.data_raw();
+
+    for (size_t i = 0; i < a_data.size(); ++i) {
+        if (!b_data[i]) {
+            throw std::runtime_error("Divide by zero error");
+        }
+        res_data[i] = a_data[i] / b_data[i];
+    }
+    return res;
+}
 
 // Tensor multiplication: (m, n)(n, l)
 Tensor matmul(const Tensor& a, const Tensor& b) {

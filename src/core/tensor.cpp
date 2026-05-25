@@ -3,7 +3,7 @@
 #include <initializer_list>
 #include <stdexcept>
 
-#include "utils/tensor_utils.h"
+#include "ops/math_ops.h"
 
 Tensor::Tensor() {
     data_ = std::vector<float>(0, 0);
@@ -89,49 +89,6 @@ float Tensor::at(const std::vector<size_t> indices) const {
     }
     return data_[offset];
 }
-Tensor Tensor::add(const Tensor& a, const Tensor& b) const {
-    if (!check_tensor_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
-    }
-    Tensor res = Tensor(0, a.shape_);
-    for (size_t i = 0; i < a.data_.size(); ++i) {
-        res.data_[i] = a.data_[i] + b.data_[i];
-    }
-    return res;
-}
-Tensor Tensor::sub(const Tensor& a, const Tensor& b) const {
-    if (!check_tensor_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
-    }
-    Tensor res = Tensor(0, a.shape_);
-    for (size_t i = 0; i < a.data_.size(); ++i) {
-        res.data_[i] = a.data_[i] - b.data_[i];
-    }
-    return res;
-}
-Tensor Tensor::mul(const Tensor& a, const Tensor& b) const {
-    if (!check_tensor_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
-    }
-    Tensor res = Tensor(0, a.shape_);
-    for (size_t i = 0; i < a.data_.size(); ++i) {
-        res.data_[i] = a.data_[i] * b.data_[i];
-    }
-    return res;
-}
-Tensor Tensor::div(const Tensor& a, const Tensor& b) const {
-    if (!check_tensor_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
-    }
-    Tensor res = Tensor(0, a.shape_);
-    for (size_t i = 0; i < a.data_.size(); ++i) {
-        if (!b.data_[i]) {
-            throw std::runtime_error("Divide by zero error");
-        }
-        res.data_[i] = a.data_[i] / b.data_[i];
-    }
-    return res;
-}
 
 const std::vector<float>& Tensor::data_raw() const { return data_; }
 const std::vector<float>& Tensor::grad_raw() const { return grad_; }
@@ -161,7 +118,6 @@ std::string Tensor::shape_string() const {
 }
 
 // Private functions
-
 
 std::vector<size_t> Tensor::calculate_strides(std::vector<size_t> tensor_shape) {
     std::vector strides = std::vector<size_t>(tensor_shape.size());

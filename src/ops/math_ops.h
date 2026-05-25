@@ -2,6 +2,15 @@
 
 #include "core/tensor.h"
 
+// Element-wise addition
+Tensor add(const Tensor& a, const Tensor& b);
+// Element-wise subtraction
+Tensor sub(const Tensor& a, const Tensor& b);
+// Element-wise multiplication
+Tensor mul(const Tensor& a, const Tensor& b);
+// Element-wise division
+Tensor div(const Tensor& a, const Tensor& b);
+
 // Tensor multiplication: (m, n)(n, l)
 Tensor matmul(const Tensor& a, const Tensor& b);
 

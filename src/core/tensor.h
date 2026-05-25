@@ -30,10 +30,6 @@ public:
     float& at(const std::vector<size_t> indices);
     float at(const std::initializer_list<size_t> indices) const;
     float at(const std::vector<size_t> indices) const;
-    Tensor add(const Tensor& a, const Tensor& b) const;
-    Tensor sub(const Tensor& a, const Tensor& b) const;
-    Tensor mul(const Tensor& a, const Tensor& b) const;
-    Tensor div(const Tensor& a, const Tensor& b) const;
 
     void zero_grad();
 
