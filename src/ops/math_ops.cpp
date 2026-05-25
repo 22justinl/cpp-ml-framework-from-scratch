@@ -1,4 +1,4 @@
-#include "ops/matmul.h"
+#include "ops/math_ops.h"
 
 // Tensor multiplication: (m, n)(n, l)
 Tensor matmul(const Tensor& a, const Tensor& b) {
@@ -73,4 +73,24 @@ Tensor dot(const Tensor& a, const Tensor& b) {
         return Tensor({res}, {1});
     }
     throw std::runtime_error("Cannot dot product tensors with shapes " + a.shape_string() + " and " + b.shape_string());
+}
+
+Tensor transpose(const Tensor& t) {
+    if (t.shape().size() > 2) {
+        throw std::runtime_error("Transpose supported for tensors up to 2 dimensions");
+    }
+    if (t.shape().size() == 0) {
+        return t;
+    }
+    if (t.shape().size() == 1) {
+        return Tensor(t.data_raw(), {1, t.shape()[0]});
+    }
+    std::vector<size_t> new_shape({t.shape()[1], t.shape()[0]});
+    Tensor res(0.f, t.shape());
+    for (size_t i = 0; i < t.shape()[0]; ++i) {
+        for (size_t j = 0; j < t.shape()[1]; ++j) {
+            res({j, i}) = t({i, j});
+        }
+    }
+    return res;
 }

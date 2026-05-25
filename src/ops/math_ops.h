@@ -10,3 +10,5 @@ Tensor matvec(const Tensor& a, const Tensor& b);
 
 // (n)(n) or (n,1)(n,1) or (1,n)(1,n)
 Tensor dot(const Tensor& a, const Tensor& b);
+
+Tensor transpose(const Tensor& t);

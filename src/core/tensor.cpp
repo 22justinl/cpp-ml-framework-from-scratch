@@ -3,6 +3,8 @@
 #include <initializer_list>
 #include <stdexcept>
 
+#include "utils/tensor_utils.h"
+
 Tensor::Tensor() {
     data_ = std::vector<float>(0, 0);
     grad_ = std::vector<float>(0, 0);
@@ -10,7 +12,10 @@ Tensor::Tensor() {
     strides_ = std::vector<size_t>(0, 0);
 }
 
-Tensor::Tensor(const std::initializer_list<float> init_data, const std::initializer_list<size_t> shape): data_(init_data), shape_(shape) {
+Tensor::Tensor(const std::initializer_list<float> init_data, const std::initializer_list<size_t> shape): Tensor(std::vector(init_data), std::vector(shape)) {}
+Tensor::Tensor(const std::initializer_list<float> init_data, const std::vector<size_t> shape): data_(std::vector(init_data)), shape_(shape) {}
+Tensor::Tensor(const std::vector<float> init_data, const std::initializer_list<size_t> shape): data_(init_data), shape_(std::vector(shape)) {}
+Tensor::Tensor(const std::vector<float> init_data, const std::vector<size_t> shape): data_(init_data), shape_(shape) {
     if (shape_.size() > 2) {
         throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
     }
@@ -18,30 +23,7 @@ Tensor::Tensor(const std::initializer_list<float> init_data, const std::initiali
     strides_ = calculate_strides(shape_);
 }
 
-Tensor::Tensor(const std::initializer_list<float> init_data, const std::vector<size_t> shape): data_(init_data), shape_(shape) {
-    if (shape_.size() > 2) {
-        throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
-    }
-    grad_ = std::vector<float>(data_.size(), 0);
-    strides_ = calculate_strides(shape_);
-}
-
-Tensor::Tensor(const float fill_val, const std::initializer_list<size_t> shape): shape_(shape) {
-    if (shape_.size() > 2) {
-        throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
-    }
-    size_t n_el = 0;
-    if (shape_.size() > 0) {
-        n_el = shape_[0];
-        for (size_t i = 1; i < shape_.size(); ++i) {
-            n_el *= shape_[i];
-        }
-    }
-    data_ = std::vector<float>(n_el, fill_val);
-    grad_ = std::vector<float>(data_.size(), 0);
-    strides_ = calculate_strides(shape_);
-}
-
+Tensor::Tensor(const float fill_val, const std::initializer_list<size_t> shape): Tensor(fill_val, std::vector(shape)) {}
 Tensor::Tensor(const float fill_val, const std::vector<size_t> shape): shape_(shape) {
     if (shape_.size() > 2) {
         throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
@@ -77,7 +59,8 @@ Tensor Tensor::operator/(const Tensor& other) const {
     return div(*this, other);
 }
 
-float& Tensor::at(const std::initializer_list<size_t> indices) {
+float& Tensor::at(const std::initializer_list<size_t> indices) { return at(std::vector(indices)); }
+float& Tensor::at(const std::vector<size_t> indices) {
     if (indices.size() != shape_.size()) {
         throw std::runtime_error("Index shape mismatch");
     }
@@ -91,7 +74,8 @@ float& Tensor::at(const std::initializer_list<size_t> indices) {
     }
     return data_[offset];
 }
-float Tensor::at(const std::initializer_list<size_t> indices) const {
+float Tensor::at(const std::initializer_list<size_t> indices) const { return at(std::vector(indices)); }
+float Tensor::at(const std::vector<size_t> indices) const {
     if (indices.size() != shape_.size()) {
         throw std::runtime_error("Index shape mismatch");
     }
@@ -106,7 +90,7 @@ float Tensor::at(const std::initializer_list<size_t> indices) const {
     return data_[offset];
 }
 Tensor Tensor::add(const Tensor& a, const Tensor& b) const {
-    if (!check_shape_match(a, b)) {
+    if (!check_tensor_shape_match(a, b)) {
         throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
     }
     Tensor res = Tensor(0, a.shape_);
@@ -116,7 +100,7 @@ Tensor Tensor::add(const Tensor& a, const Tensor& b) const {
     return res;
 }
 Tensor Tensor::sub(const Tensor& a, const Tensor& b) const {
-    if (!check_shape_match(a, b)) {
+    if (!check_tensor_shape_match(a, b)) {
         throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
     }
     Tensor res = Tensor(0, a.shape_);
@@ -126,7 +110,7 @@ Tensor Tensor::sub(const Tensor& a, const Tensor& b) const {
     return res;
 }
 Tensor Tensor::mul(const Tensor& a, const Tensor& b) const {
-    if (!check_shape_match(a, b)) {
+    if (!check_tensor_shape_match(a, b)) {
         throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
     }
     Tensor res = Tensor(0, a.shape_);
@@ -136,7 +120,7 @@ Tensor Tensor::mul(const Tensor& a, const Tensor& b) const {
     return res;
 }
 Tensor Tensor::div(const Tensor& a, const Tensor& b) const {
-    if (!check_shape_match(a, b)) {
+    if (!check_tensor_shape_match(a, b)) {
         throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
     }
     Tensor res = Tensor(0, a.shape_);
@@ -178,18 +162,6 @@ std::string Tensor::shape_string() const {
 
 // Private functions
 
-bool Tensor::check_shape_match(Tensor t1, Tensor t2) const {
-    if (t1.shape_.size() != t2.shape_.size()) {
-        return false;
-    }
-    for (size_t i = 0; i < t1.shape_.size(); ++i) {
-        if (t1.shape_[i] != t2.shape_[i]) {
-            return false;
-        }
-    }
-
-    return true;
-}
 
 std::vector<size_t> Tensor::calculate_strides(std::vector<size_t> tensor_shape) {
     std::vector strides = std::vector<size_t>(tensor_shape.size());
