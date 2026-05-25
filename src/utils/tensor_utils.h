@@ -2,5 +2,5 @@
 
 #include "core/tensor.h"
 
-bool check_tensor_equal(Tensor t1, Tensor t2);
-bool check_tensor_shape_match(Tensor t1, Tensor t2);
+bool check_tensor_equal(const Tensor& t1, const Tensor& t2);
+bool check_tensor_shape_match(const Tensor& t1, const Tensor& t2);

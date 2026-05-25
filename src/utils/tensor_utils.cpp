@@ -2,7 +2,7 @@
 
 #include "core/tensor.h"
 
-bool check_tensor_equal(Tensor t1, Tensor t2) {
+bool check_tensor_equal(const Tensor& t1, const Tensor& t2) {
     if (!check_tensor_shape_match(t1, t2)) {
         return false;
     }
@@ -16,7 +16,7 @@ bool check_tensor_equal(Tensor t1, Tensor t2) {
 
     return true;
 }
-bool check_tensor_shape_match(Tensor t1, Tensor t2) {
+bool check_tensor_shape_match(const Tensor& t1, const Tensor& t2) {
     std::vector<size_t> t1_shape = t1.shape();
     std::vector<size_t> t2_shape = t2.shape();
     if (t1_shape.size() != t2_shape.size()) {

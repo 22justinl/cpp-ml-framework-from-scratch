@@ -5,7 +5,7 @@
 TEST_CASE("Tensor initialization (empty)") {
     Tensor t;
     CHECK(t.data_raw().size() == 0);
-    CHECK(t.grad_raw().size() == 0);
+    CHECK_THROWS(t.grad());
     CHECK(t.shape().size() == 0);
     CHECK(t.strides_raw().size() == 0);
 }
@@ -18,7 +18,7 @@ TEST_CASE("Tensor initialization (values)") {
             6,7
             }, {4,2});
     CHECK(t.data_raw().size() == 8);
-    CHECK(t.grad_raw().size() == 8);
+    CHECK_THROWS(t.grad());
     CHECK(t.shape().size() == 2);
     CHECK(t.strides_raw().size() == 2);
 
@@ -28,14 +28,13 @@ TEST_CASE("Tensor initialization (values)") {
     CHECK(t.strides_raw()[1] == 1);
     for (size_t i = 0; i < 8; ++i) {
         CHECK(t.data_raw()[i] == i);
-        CHECK(t.grad_raw()[i] == 0);
     }
 }
 
 TEST_CASE("Tensor initialization (full)") {
     Tensor t(1.5, {5, 3});
     CHECK(t.data_raw().size() == 15);
-    CHECK(t.grad_raw().size() == 15);
+    CHECK_THROWS(t.grad());
     CHECK(t.shape().size() == 2);
     CHECK(t.strides_raw().size() == 2);
 
@@ -45,7 +44,6 @@ TEST_CASE("Tensor initialization (full)") {
     CHECK(t.strides_raw()[1] == 1);
     for (size_t i = 0; i < 15; ++i) {
         CHECK(t.data_raw()[i] == 1.5);
-        CHECK(t.grad_raw()[i] == 0);
     }
 }
 
@@ -123,7 +121,18 @@ TEST_CASE("Tensor div") {
     CHECK_THROWS(t2/t3);
 }
 
-
-// TEST_CASE("Tensor zero grad") {
-//     Tensor t({0,1,2,3,4,5,6,7}, {2,4});
-// }
+TEST_CASE("Tensor zero grad") {
+    Tensor t({0,1,2,3,4,5,6,7}, {2,4}, true);
+    Tensor& grad = t.grad();
+    for (size_t i = 0; i < 8; ++i) {
+        CHECK(grad.data_raw()[i] == 0.f);
+    }
+    grad({0,0}) = 1.f;
+    grad({1,3}) = 2.5f;
+    CHECK(t.grad()({0,0}) == 1.f);
+    CHECK(t.grad()({1,3}) == 2.5f);
+    t.zero_grad();
+    for (size_t i = 0; i < 8; ++i) {
+        CHECK(t.grad().data_raw()[i] == 0.f);
+    }
+}

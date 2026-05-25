@@ -6,38 +6,40 @@
 #include "ops/math_ops.h"
 
 Tensor::Tensor() {
-    data_ = std::vector<float>(0, 0);
-    grad_ = std::vector<float>(0, 0);
-    shape_ = std::vector<size_t>(0, 0);
-    strides_ = std::vector<size_t>(0, 0);
+    impl_ = std::make_shared<TensorImpl>(TensorImpl(std::vector<float>(0, 0), std::vector<size_t>(0, 0), std::vector<size_t>(0, 0), false, nullptr));
 }
 
-Tensor::Tensor(const std::initializer_list<float> init_data, const std::initializer_list<size_t> shape): Tensor(std::vector(init_data), std::vector(shape)) {}
-Tensor::Tensor(const std::initializer_list<float> init_data, const std::vector<size_t> shape): data_(std::vector(init_data)), shape_(shape) {}
-Tensor::Tensor(const std::vector<float> init_data, const std::initializer_list<size_t> shape): data_(init_data), shape_(std::vector(shape)) {}
-Tensor::Tensor(const std::vector<float> init_data, const std::vector<size_t> shape): data_(init_data), shape_(shape) {
-    if (shape_.size() > 2) {
+Tensor::Tensor(const std::initializer_list<float> init_data, const std::initializer_list<size_t> shape, bool requires_grad): Tensor(std::vector(init_data), std::vector(shape), requires_grad) {}
+Tensor::Tensor(const std::initializer_list<float> init_data, const std::vector<size_t> shape, bool requires_grad): Tensor(std::vector(init_data), shape, requires_grad) {}
+Tensor::Tensor(const std::vector<float> init_data, const std::initializer_list<size_t> shape, bool requires_grad): Tensor(init_data, std::vector(shape), requires_grad) {}
+Tensor::Tensor(const std::vector<float> init_data, const std::vector<size_t> shape, bool requires_grad) {
+    if (shape.size() > 2) {
         throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
     }
-    grad_ = std::vector<float>(data_.size(), 0);
-    strides_ = calculate_strides(shape_);
+    Tensor* grad = nullptr;
+    if (requires_grad) {
+        grad = new Tensor(0.f, shape);
+    }
+    impl_ = std::make_shared<TensorImpl>(TensorImpl(init_data, shape, calculate_strides(shape), requires_grad, grad));
 }
 
-Tensor::Tensor(const float fill_val, const std::initializer_list<size_t> shape): Tensor(fill_val, std::vector(shape)) {}
-Tensor::Tensor(const float fill_val, const std::vector<size_t> shape): shape_(shape) {
-    if (shape_.size() > 2) {
+Tensor::Tensor(const float fill_val, const std::initializer_list<size_t> shape, bool requires_grad): Tensor(fill_val, std::vector(shape), requires_grad) {}
+Tensor::Tensor(const float fill_val, const std::vector<size_t> shape, bool requires_grad) {
+    if (shape.size() > 2) {
         throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
     }
     size_t n_el = 0;
-    if (shape_.size() > 0) {
-        n_el = shape_[0];
-        for (size_t i = 1; i < shape_.size(); ++i) {
-            n_el *= shape_[i];
+    if (shape.size() > 0) {
+        n_el = shape[0];
+        for (size_t i = 1; i < shape.size(); ++i) {
+            n_el *= shape[i];
         }
     }
-    data_ = std::vector<float>(n_el, fill_val);
-    grad_ = std::vector<float>(data_.size(), 0);
-    strides_ = calculate_strides(shape_);
+    Tensor* grad = nullptr;
+    if (requires_grad) {
+        grad = new Tensor(0.f, shape);
+    }
+    impl_ = std::make_shared<TensorImpl>(TensorImpl(std::vector<float>(n_el, fill_val), shape, calculate_strides(shape), requires_grad, grad));
 }
 
 float& Tensor::operator()(const std::initializer_list<size_t> indices) {
@@ -61,59 +63,70 @@ Tensor Tensor::operator/(const Tensor& other) const {
 
 float& Tensor::at(const std::initializer_list<size_t> indices) { return at(std::vector(indices)); }
 float& Tensor::at(const std::vector<size_t> indices) {
-    if (indices.size() != shape_.size()) {
+    if (indices.size() != impl_->shape.size()) {
         throw std::runtime_error("Index shape mismatch");
     }
     size_t offset = 0;
-    for (size_t i = 0; i < shape_.size(); ++i) {
+    for (size_t i = 0; i < impl_->shape.size(); ++i) {
         size_t idx = *(indices.begin()+i);
-        if (idx >= shape_[i]) {
+        if (idx >= impl_->shape[i]) {
             throw std::runtime_error("Index out of range");
         }
-        offset += strides_[i] * idx;
+        offset += impl_->strides[i] * idx;
     }
-    return data_[offset];
+    return impl_->data[offset];
 }
 float Tensor::at(const std::initializer_list<size_t> indices) const { return at(std::vector(indices)); }
 float Tensor::at(const std::vector<size_t> indices) const {
-    if (indices.size() != shape_.size()) {
+    if (indices.size() != impl_->shape.size()) {
         throw std::runtime_error("Index shape mismatch");
     }
     size_t offset = 0;
-    for (size_t i = 0; i < shape_.size(); ++i) {
+    for (size_t i = 0; i < impl_->shape.size(); ++i) {
         size_t idx = *(indices.begin()+i);
-        if (idx >= shape_[i]) {
+        if (idx >= impl_->shape[i]) {
             throw std::runtime_error("Index out of range");
         }
-        offset += strides_[i] * idx;
+        offset += impl_->strides[i] * idx;
     }
-    return data_[offset];
+    return impl_->data[offset];
 }
 
-const std::vector<float>& Tensor::data_raw() const { return data_; }
-const std::vector<float>& Tensor::grad_raw() const { return grad_; }
-const std::vector<size_t>& Tensor::shape() const { return shape_; }
-const std::vector<size_t>& Tensor::strides_raw() const { return strides_; }
-std::vector<float>& Tensor::data_raw() { return data_; }
-std::vector<float>& Tensor::grad_raw() { return grad_; }
-std::vector<size_t>& Tensor::shape() { return shape_; }
-std::vector<size_t>& Tensor::strides_raw() { return strides_; }
+const std::vector<float>& Tensor::data_raw() const { return impl_->data; }
+const Tensor& Tensor::grad() const { 
+    if (!impl_->requires_grad) {
+        throw std::runtime_error("Accessed grad of Tensor with requires_grad=false");
+    }
+    return *impl_->grad;
+}
+const std::vector<size_t>& Tensor::shape() const { return impl_->shape; }
+const std::vector<size_t>& Tensor::strides_raw() const { return impl_->strides; }
+std::vector<float>& Tensor::data_raw() { return impl_->data; }
+Tensor& Tensor::grad() {
+    if (!impl_->requires_grad) {
+        throw std::runtime_error("Accessed grad of Tensor with requires_grad=false");
+    }
+    return *impl_->grad;
+}
+std::vector<size_t>& Tensor::shape() { return impl_->shape; }
+std::vector<size_t>& Tensor::strides_raw() { return impl_->strides; }
 
 void Tensor::zero_grad() {
-    for (size_t i = 0; i < data_.size(); ++i) {
-        grad_[i] = 0;
+    std::vector<float>& grad_data = impl_->grad->impl_->data;
+    for (size_t i = 0; i < grad_data.size(); ++i) {
+        grad_data[i] = 0;
     }
 }
 
 std::string Tensor::shape_string() const {
-    if (shape_.size() == 0) {
+    if (impl_->shape.size() == 0) {
         return "()";
     }
     std::string s = "(";
-    for (size_t i = 0; i < shape_.size()-1; ++i) {
-        s += std::to_string(shape_[i]) + ", ";
+    for (size_t i = 0; i < impl_->shape.size()-1; ++i) {
+        s += std::to_string(impl_->shape[i]) + ", ";
     }
-    s += std::to_string(shape_[shape_.size()-1]) + ")";
+    s += std::to_string(impl_->shape[impl_->shape.size()-1]) + ")";
     return s;
 }
 
