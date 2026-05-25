@@ -10,6 +10,7 @@ add_library(cpp_ml_from_scratch
     src/core/value.cpp
     src/core/tensor.cpp
     src/ops/math_ops.cpp
+    src/ops/reduction_ops.cpp
     src/utils/tensor_utils.cpp
 )
 
@@ -23,6 +24,7 @@ add_executable(tests
     tests/test_value.cpp
     tests/test_tensor.cpp
     tests/test_math_ops.cpp
+    tests/test_reduction_ops.cpp
 )
 
 target_include_directories(tests PRIVATE

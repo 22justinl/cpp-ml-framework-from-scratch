@@ -12,3 +12,5 @@ Tensor matvec(const Tensor& a, const Tensor& b);
 Tensor dot(const Tensor& a, const Tensor& b);
 
 Tensor transpose(const Tensor& t);
+
+// TODO: exp, log, power, sqrt, sin, cos, tan
