@@ -7,10 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Main library
 add_library(cpp_ml_from_scratch
-    src/core/value.cpp
     src/core/tensor.cpp
     src/ops/math_ops.cpp
     src/ops/reduction_ops.cpp
+    src/autograd/math_ops.cpp
     src/utils/tensor_utils.cpp
 )
 
@@ -21,7 +21,6 @@ target_include_directories(cpp_ml_from_scratch PUBLIC
 # Tests
 add_executable(tests
     tests/test_main.cpp
-    tests/test_value.cpp
     tests/test_tensor.cpp
     tests/test_math_ops.cpp
     tests/test_reduction_ops.cpp
