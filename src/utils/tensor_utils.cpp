@@ -1,5 +1,7 @@
 #include "utils/tensor_utils.h"
 
+#include <iostream>
+
 #include "core/tensor.h"
 
 bool check_tensor_equal(const Tensor& t1, const Tensor& t2) {
@@ -29,4 +31,12 @@ bool check_tensor_shape_match(const Tensor& t1, const Tensor& t2) {
     }
 
     return true;
+}
+void print_tensor(const Tensor& t1) {
+    for (size_t i = 0; i < t1.shape()[0]; ++i) {
+        for (size_t j = 0; j < t1.shape()[1]; ++j) {
+            std::cout << t1({i, j}) << "\t\t";
+        }
+        std::cout << std::endl;
+    }
 }

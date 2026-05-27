@@ -1,9 +1,11 @@
 #include "tensor.h"
 
 #include <initializer_list>
+#include <iterator>
 #include <stdexcept>
 
 #include "ops/math_ops.h"
+#include "autograd/operator.h"
 
 Tensor::Tensor() {
     impl_ = std::make_shared<TensorImpl>(TensorImpl(std::vector<float>(0, 0), std::vector<size_t>(0, 0), std::vector<size_t>(0, 0), false, nullptr));
@@ -41,6 +43,20 @@ Tensor::Tensor(const float fill_val, const std::vector<size_t> shape, bool requi
     }
     impl_ = std::make_shared<TensorImpl>(TensorImpl(std::vector<float>(n_el, fill_val), shape, calculate_strides(shape), requires_grad, grad));
 }
+Tensor::Tensor(const Tensor& other) {
+    std::vector<float> new_data;
+    std::vector<size_t> new_shape;
+    std::vector<size_t> new_strides;
+    std::copy(other.impl_->data.begin(), other.impl_->data.end(), std::back_insert_iterator(new_data));
+    std::copy(other.impl_->shape.begin(), other.impl_->shape.end(), std::back_insert_iterator(new_data));
+    std::copy(other.impl_->strides.begin(), other.impl_->strides.end(), std::back_insert_iterator(new_data));
+    if (other.impl_->grad) {
+        Tensor* new_grad = new Tensor(*other.impl_->grad);
+        impl_ = std::make_shared<TensorImpl>(TensorImpl(new_data, new_shape, new_strides, other.impl_->requires_grad, new_grad));
+    } else {
+        impl_ = std::make_shared<TensorImpl>(TensorImpl(new_data, new_shape, new_strides, other.impl_->requires_grad, nullptr));
+    }
+}
 
 float& Tensor::operator()(const std::initializer_list<size_t> indices) {
     return at(indices);
@@ -59,6 +75,26 @@ Tensor Tensor::operator*(const Tensor& other) const {
 }
 Tensor Tensor::operator/(const Tensor& other) const {
     return div(*this, other);
+}
+Tensor& Tensor::operator=(const Tensor& other) {
+    impl_ = other.impl_;
+    return *this;
+}
+Tensor& Tensor::operator+=(const Tensor& other) {
+    *this = add(*this, other);
+    return *this;
+}
+Tensor& Tensor::operator-=(const Tensor& other) {
+    *this = sub(*this, other);
+    return *this;
+}
+Tensor& Tensor::operator*=(const Tensor& other) {
+    *this = mul(*this, other);
+    return *this;
+}
+Tensor& Tensor::operator/=(const Tensor& other) {
+    *this = div(*this, other);
+    return *this;
 }
 
 float& Tensor::at(const std::initializer_list<size_t> indices) { return at(std::vector(indices)); }
@@ -93,31 +129,23 @@ float Tensor::at(const std::vector<size_t> indices) const {
 }
 
 const std::vector<float>& Tensor::data_raw() const { return impl_->data; }
+std::vector<float>& Tensor::data_raw() { return impl_->data; }
+
 const Tensor& Tensor::grad() const { 
     if (!impl_->requires_grad) {
         throw std::runtime_error("Accessed grad of Tensor with requires_grad=false");
     }
     return *impl_->grad;
 }
-const std::vector<size_t>& Tensor::shape() const { return impl_->shape; }
-const std::vector<size_t>& Tensor::strides_raw() const { return impl_->strides; }
-std::vector<float>& Tensor::data_raw() { return impl_->data; }
 Tensor& Tensor::grad() {
     if (!impl_->requires_grad) {
         throw std::runtime_error("Accessed grad of Tensor with requires_grad=false");
     }
     return *impl_->grad;
 }
+
+const std::vector<size_t>& Tensor::shape() const { return impl_->shape; }
 std::vector<size_t>& Tensor::shape() { return impl_->shape; }
-std::vector<size_t>& Tensor::strides_raw() { return impl_->strides; }
-
-void Tensor::zero_grad() {
-    std::vector<float>& grad_data = impl_->grad->impl_->data;
-    for (size_t i = 0; i < grad_data.size(); ++i) {
-        grad_data[i] = 0;
-    }
-}
-
 std::string Tensor::shape_string() const {
     if (impl_->shape.size() == 0) {
         return "()";
@@ -128,6 +156,43 @@ std::string Tensor::shape_string() const {
     }
     s += std::to_string(impl_->shape[impl_->shape.size()-1]) + ")";
     return s;
+}
+
+const std::vector<size_t>& Tensor::strides_raw() const { return impl_->strides; }
+std::vector<size_t>& Tensor::strides_raw() { return impl_->strides; }
+
+bool Tensor::requires_grad() const {
+    return impl_->requires_grad;
+}
+
+std::shared_ptr<const TensorImpl> Tensor::impl() const {
+    return impl_;
+}
+
+void Tensor::set_grad_fn(std::shared_ptr<Operator> grad_fn) {
+    impl_->grad_fn = grad_fn;
+}
+
+void Tensor::zero_grad() {
+    std::vector<float>& grad_data = impl_->grad->impl_->data;
+    for (size_t i = 0; i < grad_data.size(); ++i) {
+        grad_data[i] = 0;
+    }
+}
+
+void Tensor::backward() {
+    backward(Tensor(1.f, impl_->shape));
+}
+void Tensor::backward(const Tensor& out_grad) {
+    if (!impl_->requires_grad) {
+        throw std::runtime_error("Called backward on Tensor with requires_grad=false");
+    }
+    if (!impl_->grad) {
+        impl_->grad = std::make_unique<Tensor>(out_grad);
+    } else {
+        *impl_->grad = out_grad;
+    }
+    impl_->grad_fn->backward();
 }
 
 // Private functions

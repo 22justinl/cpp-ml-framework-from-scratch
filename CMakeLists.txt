@@ -23,6 +23,7 @@ add_executable(tests
     tests/test_main.cpp
     tests/test_tensor.cpp
     tests/test_math_ops.cpp
+    tests/test_math_ops_autograd.cpp
     tests/test_reduction_ops.cpp
 )
 

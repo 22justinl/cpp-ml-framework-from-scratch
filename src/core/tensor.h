@@ -9,7 +9,6 @@ struct TensorImpl;
 
 class Operator;
 
-
 class Tensor {
 public:
     Tensor();
@@ -19,7 +18,7 @@ public:
     Tensor(const std::vector<float> init_data, const std::vector<size_t> shape, bool requires_grad=false);
     Tensor(const float fill_val, const std::initializer_list<size_t> shape, bool requires_grad=false);
     Tensor(const float fill_val, const std::vector<size_t> shape, bool requires_grad=false);
-    // TODO: copy constructor
+    Tensor(const Tensor& other);
 
     float& operator()(const std::initializer_list<size_t> indices);
     float& operator()(const std::vector<size_t> indices);
@@ -30,26 +29,43 @@ public:
     Tensor operator*(const Tensor& other) const;
     Tensor operator/(const Tensor& other) const;
 
+    Tensor& operator=(const Tensor& other);
+    Tensor& operator+=(const Tensor& other);
+    Tensor& operator-=(const Tensor& other);
+    Tensor& operator*=(const Tensor& other);
+    Tensor& operator/=(const Tensor& other);
+
     float& at(const std::initializer_list<size_t> indices);
     float& at(const std::vector<size_t> indices);
     float at(const std::initializer_list<size_t> indices) const;
     float at(const std::vector<size_t> indices) const;
 
-    void zero_grad();
+    const std::vector<float>& data_raw() const;
+    std::vector<float>& data_raw();
 
+    const Tensor& grad() const;
+    Tensor& grad();
+
+    const std::vector<size_t>& shape() const;
+    std::vector<size_t>& shape();
     std::string shape_string() const;
 
-    const std::vector<float>& data_raw() const;
-    const Tensor& grad() const;
-    const std::vector<size_t>& shape() const;
     const std::vector<size_t>& strides_raw() const;
-    std::vector<float>& data_raw();
-    Tensor& grad();
-    std::vector<size_t>& shape();
     std::vector<size_t>& strides_raw();
+
+    bool requires_grad() const;
+
+    std::shared_ptr<const TensorImpl> impl() const;
+
+    void set_grad_fn(std::shared_ptr<Operator> grad_fn);
+
+    void zero_grad();
+    void backward();
+    void backward(const Tensor& out_grad);
+
 private:
     std::shared_ptr<TensorImpl> impl_;
-    std::vector<size_t> calculate_strides(std::vector<size_t> tensor_shape);
+    static std::vector<size_t> calculate_strides(std::vector<size_t> tensor_shape);
 };
 
 struct TensorImpl {
@@ -70,5 +86,5 @@ struct TensorImpl {
     std::vector<size_t> strides;
     bool requires_grad = false;
     std::unique_ptr<Tensor> grad;
-    std::shared_ptr<Operator> creator = nullptr;
+    std::shared_ptr<Operator> grad_fn = nullptr;
 };
