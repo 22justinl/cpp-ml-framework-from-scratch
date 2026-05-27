@@ -61,3 +61,22 @@ TEST_CASE("Tensor indexing") {
     CHECK_THROWS(t({0, 2}));
     CHECK_THROWS(t({4, 0}));
 }
+
+TEST_CASE("Tensor zero grad") {
+    Tensor t({0,1,2,3,4,5,6,7}, {2,4}, true);
+    Tensor& grad = t.grad();
+    for (size_t i = 0; i < 8; ++i) {
+        CHECK(grad.data_raw()[i] == 0.f);
+    }
+    grad({0,0}) = 1.f;
+    grad({1,3}) = 2.5f;
+    CHECK(t.grad()({0,0}) == 1.f);
+    CHECK(t.grad()({1,3}) == 2.5f);
+    t.zero_grad();
+    for (size_t i = 0; i < 8; ++i) {
+        CHECK(t.grad().data_raw()[i] == 0.f);
+    }
+    Tensor t_nograd({1,2}, {2,1});
+    CHECK_THROWS(t_nograd.zero_grad());
+}
+

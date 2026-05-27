@@ -174,6 +174,9 @@ void Tensor::set_grad_fn(std::shared_ptr<Operator> grad_fn) {
 }
 
 void Tensor::zero_grad() {
+    if (!impl_->requires_grad) {
+        throw std::runtime_error("Called zero_grad on Tensor with requires_grad=false");
+    }
     std::vector<float>& grad_data = impl_->grad->impl_->data;
     for (size_t i = 0; i < grad_data.size(); ++i) {
         grad_data[i] = 0;

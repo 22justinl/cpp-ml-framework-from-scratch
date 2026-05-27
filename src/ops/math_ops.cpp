@@ -1,6 +1,7 @@
 #include "ops/math_ops.h"
-#include "utils/tensor_utils.h"
 #include "autograd/math_ops.h"
+
+// TODO: binary operation helper
 
 Tensor add(const Tensor& a, const Tensor& b) {
     Tensor c = AddOp::forward(a, b);
@@ -11,18 +12,12 @@ Tensor add(const Tensor& a, const Tensor& b) {
     return c;
 }
 Tensor sub(const Tensor& a, const Tensor& b) {
-    if (!check_tensor_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
+    Tensor c = SubOp::forward(a, b);
+    if (a.requires_grad() || b.requires_grad()) {
+        std::shared_ptr<SubOp> op = std::make_shared<SubOp>(a, b, c);
+        c.set_grad_fn(op);
     }
-    Tensor res = Tensor(0, a.shape());
-    const std::vector<float>& a_data = a.data_raw();
-    const std::vector<float>& b_data = b.data_raw();
-    std::vector<float>& res_data = res.data_raw();
-
-    for (size_t i = 0; i < a_data.size(); ++i) {
-        res_data[i] = a_data[i] - b_data[i];
-    }
-    return res;
+    return c;
 }
 Tensor mul(const Tensor& a, const Tensor& b) {
     Tensor c = MulOp::forward(a, b);
@@ -33,21 +28,12 @@ Tensor mul(const Tensor& a, const Tensor& b) {
     return c;
 }
 Tensor div(const Tensor& a, const Tensor& b) {
-    if (!check_tensor_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + a.shape_string() + " and " + b.shape_string());
+    Tensor c = DivOp::forward(a, b);
+    if (a.requires_grad() || b.requires_grad()) {
+        std::shared_ptr<DivOp> op = std::make_shared<DivOp>(a, b, c);
+        c.set_grad_fn(op);
     }
-    Tensor res = Tensor(0, a.shape());
-    const std::vector<float>& a_data = a.data_raw();
-    const std::vector<float>& b_data = b.data_raw();
-    std::vector<float>& res_data = res.data_raw();
-
-    for (size_t i = 0; i < a_data.size(); ++i) {
-        if (!b_data[i]) {
-            throw std::runtime_error("Divide by zero error");
-        }
-        res_data[i] = a_data[i] / b_data[i];
-    }
-    return res;
+    return c;
 }
 
 // Tensor multiplication: (m, n)(n, l)

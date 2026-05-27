@@ -63,22 +63,6 @@ TEST_CASE("Tensor div") {
     CHECK_THROWS(t2/t3);
 }
 
-TEST_CASE("Tensor zero grad") {
-    Tensor t({0,1,2,3,4,5,6,7}, {2,4}, true);
-    Tensor& grad = t.grad();
-    for (size_t i = 0; i < 8; ++i) {
-        CHECK(grad.data_raw()[i] == 0.f);
-    }
-    grad({0,0}) = 1.f;
-    grad({1,3}) = 2.5f;
-    CHECK(t.grad()({0,0}) == 1.f);
-    CHECK(t.grad()({1,3}) == 2.5f);
-    t.zero_grad();
-    for (size_t i = 0; i < 8; ++i) {
-        CHECK(t.grad().data_raw()[i] == 0.f);
-    }
-}
-
 TEST_CASE("Tensor matmul") {
     Tensor t1({0,1,2,3,4,5,6,7,8,9,10,11}, {3,4});
     Tensor t2({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}, {4,5});

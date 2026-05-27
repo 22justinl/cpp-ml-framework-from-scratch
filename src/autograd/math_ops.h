@@ -16,9 +16,19 @@ private:
     std::shared_ptr<const TensorImpl> b;
     std::shared_ptr<const TensorImpl> out;
 };
-// // Element-wise subtraction
-// Tensor sub(const Tensor& a, const Tensor& b);
-// // Element-wise multiplication
+// Element-wise subtraction
+class SubOp: public Operator {
+public:
+    SubOp(const Tensor& t1, const Tensor& t2, const Tensor& t3);
+    static Tensor forward(const Tensor& a, const Tensor& b);
+
+    void backward() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> b;
+    std::shared_ptr<const TensorImpl> out;
+};
+// Element-wise multiplication
 class MulOp: public Operator {
 public:
     MulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3);
@@ -30,9 +40,19 @@ private:
     std::shared_ptr<const TensorImpl> b;
     std::shared_ptr<const TensorImpl> out;
 };
-// // Element-wise division
-// Tensor div(const Tensor& a, const Tensor& b);
-//
+// Element-wise division
+class DivOp: public Operator {
+public:
+    DivOp(const Tensor& t1, const Tensor& t2, const Tensor& t3);
+    static Tensor forward(const Tensor& a, const Tensor& b);
+
+    void backward() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> b;
+    std::shared_ptr<const TensorImpl> out;
+};
+
 // // Tensor multiplication: (m, n)(n, l)
 // Tensor matmul(const Tensor& a, const Tensor& b);
 //
