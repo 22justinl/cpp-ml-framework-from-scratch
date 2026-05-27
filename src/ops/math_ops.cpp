@@ -1,39 +1,27 @@
 #include "ops/math_ops.h"
 #include "autograd/math_ops.h"
 
-// TODO: binary operation helper
+template <class BinOp>
+Tensor binop_helper(const Tensor& a, const Tensor& b) {
+    Tensor c = BinOp::forward(a, b);
+    if (a.requires_grad() || b.requires_grad()) {
+        std::shared_ptr<BinOp> op = std::make_shared<BinOp>(a, b, c);
+        c.set_grad_fn(op);
+    }
+    return c;
+}
 
 Tensor add(const Tensor& a, const Tensor& b) {
-    Tensor c = AddOp::forward(a, b);
-    if (a.requires_grad() || b.requires_grad()) {
-        std::shared_ptr<AddOp> op = std::make_shared<AddOp>(a, b, c);
-        c.set_grad_fn(op);
-    }
-    return c;
+    return binop_helper<AddOp>(a, b);
 }
 Tensor sub(const Tensor& a, const Tensor& b) {
-    Tensor c = SubOp::forward(a, b);
-    if (a.requires_grad() || b.requires_grad()) {
-        std::shared_ptr<SubOp> op = std::make_shared<SubOp>(a, b, c);
-        c.set_grad_fn(op);
-    }
-    return c;
+    return binop_helper<SubOp>(a, b);
 }
 Tensor mul(const Tensor& a, const Tensor& b) {
-    Tensor c = MulOp::forward(a, b);
-    if (a.requires_grad() || b.requires_grad()) {
-        std::shared_ptr<MulOp> op = std::make_shared<MulOp>(a, b, c);
-        c.set_grad_fn(op);
-    }
-    return c;
+    return binop_helper<MulOp>(a, b);
 }
 Tensor div(const Tensor& a, const Tensor& b) {
-    Tensor c = DivOp::forward(a, b);
-    if (a.requires_grad() || b.requires_grad()) {
-        std::shared_ptr<DivOp> op = std::make_shared<DivOp>(a, b, c);
-        c.set_grad_fn(op);
-    }
-    return c;
+    return binop_helper<DivOp>(a, b);
 }
 
 // Tensor multiplication: (m, n)(n, l)
