@@ -8,9 +8,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Main library
 add_library(cpp_ml_from_scratch
     src/core/tensor.cpp
-    src/ops/math_ops.cpp
-    src/ops/reduction_ops.cpp
+
     src/autograd/math_ops.cpp
+
+    src/kernels/math_ops.cpp
+
+    src/ops/math_ops.cpp
+    # src/ops/reduction_ops.cpp
+
     src/utils/tensor_utils.cpp
 )
 

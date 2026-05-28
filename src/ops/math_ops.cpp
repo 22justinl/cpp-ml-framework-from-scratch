@@ -26,25 +26,7 @@ Tensor div(const Tensor& a, const Tensor& b) {
 
 // Tensor multiplication: (m, n)(n, l)
 Tensor matmul(const Tensor& a, const Tensor& b) {
-    // TODO: nD matmul
-
-    std::vector<size_t> a_shape = a.shape();
-    std::vector<size_t> b_shape = b.shape();
-    if (b_shape.size() != 2 || b_shape.size() != 2) {
-        throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
-    }
-    if (a_shape[a_shape.size()-1] != b_shape[0]) {
-        throw std::runtime_error("Cannot matrix multiply tensors with shapes " + a.shape_string() + " and " + b.shape_string());
-    }
-    Tensor res(0.f, {a_shape[0], b_shape[1]});
-    for (size_t i = 0; i < a_shape[0]; ++i) {
-        for (size_t j = 0; j < b_shape[1]; ++j) {
-            for (size_t k = 0; k < a_shape[1]; ++k) {
-                res({i, j}) += a({i, k}) * b({k, j});
-            }
-        }
-    }
-    return res;
+    return binop_helper<MatmulOp>(a, b);
 }
 
 // Tensor multiplication (m, n)(n) or (m, n)(n, 1)
@@ -110,7 +92,7 @@ Tensor transpose(const Tensor& t) {
         return Tensor(t.data_raw(), {1, t.shape()[0]});
     }
     std::vector<size_t> new_shape({t.shape()[1], t.shape()[0]});
-    Tensor res(0.f, t.shape());
+    Tensor res(0.f, new_shape);
     for (size_t i = 0; i < t.shape()[0]; ++i) {
         for (size_t j = 0; j < t.shape()[1]; ++j) {
             res({j, i}) = t({i, j});

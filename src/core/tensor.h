@@ -19,6 +19,7 @@ public:
     Tensor(const float fill_val, const std::initializer_list<size_t> shape, bool requires_grad=false);
     Tensor(const float fill_val, const std::vector<size_t> shape, bool requires_grad=false);
     Tensor(const Tensor& other);
+    Tensor(std::shared_ptr<TensorImpl> impl);
 
     float& operator()(const std::initializer_list<size_t> indices);
     float& operator()(const std::vector<size_t> indices);
@@ -55,7 +56,10 @@ public:
 
     bool requires_grad() const;
 
-    std::shared_ptr<const TensorImpl> impl() const;
+    std::shared_ptr<TensorImpl> impl() const;
+    void set_impl(std::shared_ptr<TensorImpl> impl);
+
+    Tensor detach() const;
 
     void set_grad_fn(std::shared_ptr<Operator> grad_fn);
 

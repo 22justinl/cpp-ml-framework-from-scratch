@@ -1,8 +1,8 @@
 #include "doctest.h"
 
 #include "core/tensor.h"
-#include <iostream>
-#include <ostream>
+#include "ops/math_ops.h"
+#include "utils/tensor_utils.h"
 
 TEST_CASE("Tensor add autograd") {
     Tensor t1({0,1,2,3,4,5,6,7}, {2,4}, true);
@@ -77,3 +77,18 @@ TEST_CASE("Tensor div autograd") {
         CHECK(t2.grad().data_raw()[i] == -t1.data_raw()[i]/(t2.data_raw()[i] * t2.data_raw()[i]));
     }
 }
+
+TEST_CASE("Tensor matmul autograd") {
+    Tensor t1({0,1,2,3,4,5}, {2, 3}, true);
+    Tensor t2({6,7,8,9,10,11,12,13,14,15,16,17}, {3, 4}, true);
+
+    Tensor res = matmul(t1, t2);
+    t1.zero_grad();
+    t2.zero_grad();
+    res.backward();
+    Tensor expected1({30,46,62,30,46,62}, {2,3});
+    Tensor expected2({3,3,3,3,5,5,5,5,7,7,7,7}, {3,4});
+    check_tensor_equal(t1.grad(), expected1);
+    check_tensor_equal(t2.grad(), expected2);
+}
+

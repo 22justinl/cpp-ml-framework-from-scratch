@@ -6,6 +6,7 @@
 
 #include "ops/math_ops.h"
 #include "autograd/operator.h"
+#include "utils/tensor_utils.h"
 
 Tensor::Tensor() {
     impl_ = std::make_shared<TensorImpl>(TensorImpl(std::vector<float>(0, 0), std::vector<size_t>(0, 0), std::vector<size_t>(0, 0), false, nullptr));
@@ -41,7 +42,7 @@ Tensor::Tensor(const float fill_val, const std::vector<size_t> shape, bool requi
     if (requires_grad) {
         grad = new Tensor(0.f, shape);
     }
-    impl_ = std::make_shared<TensorImpl>(TensorImpl(std::vector<float>(n_el, fill_val), shape, calculate_strides(shape), requires_grad, grad));
+    impl_ = std::make_shared<TensorImpl>(std::vector<float>(n_el, fill_val), shape, calculate_strides(shape), requires_grad, grad);
 }
 Tensor::Tensor(const Tensor& other) {
     std::vector<float> new_data;
@@ -50,13 +51,12 @@ Tensor::Tensor(const Tensor& other) {
     std::copy(other.impl_->data.begin(), other.impl_->data.end(), std::back_insert_iterator(new_data));
     std::copy(other.impl_->shape.begin(), other.impl_->shape.end(), std::back_insert_iterator(new_data));
     std::copy(other.impl_->strides.begin(), other.impl_->strides.end(), std::back_insert_iterator(new_data));
-    if (other.impl_->grad) {
-        Tensor* new_grad = new Tensor(*other.impl_->grad);
-        impl_ = std::make_shared<TensorImpl>(TensorImpl(new_data, new_shape, new_strides, other.impl_->requires_grad, new_grad));
-    } else {
-        impl_ = std::make_shared<TensorImpl>(TensorImpl(new_data, new_shape, new_strides, other.impl_->requires_grad, nullptr));
-    }
+
+    Tensor* new_grad = other.impl_->grad ? new Tensor(*other.impl_->grad) : nullptr;
+
+    impl_ = std::make_shared<TensorImpl>(new_data, new_shape, new_strides, other.impl_->requires_grad, new_grad);
 }
+Tensor::Tensor(std::shared_ptr<TensorImpl> impl): impl_(impl) {}
 
 float& Tensor::operator()(const std::initializer_list<size_t> indices) {
     return at(indices);
@@ -99,32 +99,12 @@ Tensor& Tensor::operator/=(const Tensor& other) {
 
 float& Tensor::at(const std::initializer_list<size_t> indices) { return at(std::vector(indices)); }
 float& Tensor::at(const std::vector<size_t> indices) {
-    if (indices.size() != impl_->shape.size()) {
-        throw std::runtime_error("Index shape mismatch");
-    }
-    size_t offset = 0;
-    for (size_t i = 0; i < impl_->shape.size(); ++i) {
-        size_t idx = *(indices.begin()+i);
-        if (idx >= impl_->shape[i]) {
-            throw std::runtime_error("Index out of range");
-        }
-        offset += impl_->strides[i] * idx;
-    }
+    size_t offset = calculate_offset(impl_, indices);
     return impl_->data[offset];
 }
 float Tensor::at(const std::initializer_list<size_t> indices) const { return at(std::vector(indices)); }
 float Tensor::at(const std::vector<size_t> indices) const {
-    if (indices.size() != impl_->shape.size()) {
-        throw std::runtime_error("Index shape mismatch");
-    }
-    size_t offset = 0;
-    for (size_t i = 0; i < impl_->shape.size(); ++i) {
-        size_t idx = *(indices.begin()+i);
-        if (idx >= impl_->shape[i]) {
-            throw std::runtime_error("Index out of range");
-        }
-        offset += impl_->strides[i] * idx;
-    }
+    size_t offset = calculate_offset(impl_, indices);
     return impl_->data[offset];
 }
 
@@ -165,8 +145,16 @@ bool Tensor::requires_grad() const {
     return impl_->requires_grad;
 }
 
-std::shared_ptr<const TensorImpl> Tensor::impl() const {
+std::shared_ptr<TensorImpl> Tensor::impl() const {
     return impl_;
+}
+void Tensor::set_impl(std::shared_ptr<TensorImpl> impl) {
+    impl_ = impl;
+}
+
+Tensor Tensor::detach() const {
+    // NOTE: creates copy of data, change to avoid copying later?
+    return Tensor(impl_->data, impl_->shape);
 }
 
 void Tensor::set_grad_fn(std::shared_ptr<Operator> grad_fn) {
