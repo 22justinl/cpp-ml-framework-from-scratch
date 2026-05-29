@@ -1,5 +1,4 @@
 #include "autograd/math_ops.h"
-#include "utils/tensor_utils.h"
 #include "kernels/math_ops.h"
 
 AddOp::AddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
@@ -8,9 +7,6 @@ AddOp::AddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     out = t3.impl();
 }
 Tensor AddOp::forward(const Tensor& t1, const Tensor& t2) {
-    if (!check_tensor_shape_match(t1, t2)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + t1.shape_string() + " and " + t2.shape_string());
-    }
     return Tensor(kernels::add(t1.impl(), t2.impl()));
 }
 void AddOp::backward() {
@@ -34,9 +30,6 @@ SubOp::SubOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     out = t3.impl();
 }
 Tensor SubOp::forward(const Tensor& t1, const Tensor& t2) {
-    if (!check_tensor_shape_match(t1, t2)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + t1.shape_string() + " and " + t2.shape_string());
-    }
     return Tensor(kernels::sub(t1.impl(), t2.impl()));
 }
 void SubOp::backward() {
@@ -60,9 +53,6 @@ MulOp::MulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     out = t3.impl();
 }
 Tensor MulOp::forward(const Tensor& t1, const Tensor& t2) {
-    if (!check_tensor_shape_match(t1, t2)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + t1.shape_string() + " and " + t2.shape_string());
-    }
     return Tensor(kernels::mul(t1.impl(), t2.impl()));
 }
 void MulOp::backward() {
@@ -86,9 +76,6 @@ DivOp::DivOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     out = t3.impl();
 }
 Tensor DivOp::forward(const Tensor& t1, const Tensor& t2) {
-    if (!check_tensor_shape_match(t1, t2)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + t1.shape_string() + " and " + t2.shape_string());
-    }
     return Tensor(kernels::div(t1.impl(), t2.impl()));
 }
 void DivOp::backward() {
@@ -107,19 +94,32 @@ void DivOp::backward() {
     }
 }
 
-MatmulOp::MatmulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
+ScalarMulOp::ScalarMulOp(float f, const Tensor& t1, const Tensor& t2) {
+    f = f;
+    a = t1.impl();
+    out = t2.impl();
+}
+Tensor ScalarMulOp::forward(float f, const Tensor& t1) {
+    return Tensor(kernels::scalar_mul(f, t1.impl()));
+}
+void ScalarMulOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(f, out->grad->impl()));
+        if (a->grad_fn) {
+            a->grad_fn->backward();
+        }
+    }
+}
+
+MatMulOp::MatMulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     a = t1.impl();
     b = t2.impl();
     out = t3.impl();
 }
-Tensor MatmulOp::forward(const Tensor& t1, const Tensor& t2) {
-    // TODO: nD matmul
-    if (t1.shape()[t1.shape().size()-1] != t2.shape()[0]) {
-        throw std::runtime_error("Cannot matrix multiply tensors with shapes " + t1.shape_string() + " and " + t2.shape_string());
-    }
+Tensor MatMulOp::forward(const Tensor& t1, const Tensor& t2) {
     return Tensor(kernels::matmul(t1.impl(), t2.impl()));
 }
-void MatmulOp::backward() {
+void MatMulOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b)));
         if (a->grad_fn) {
@@ -131,5 +131,64 @@ void MatmulOp::backward() {
         if (b->grad_fn) {
             b->grad_fn->backward();
         }
+    }
+}
+
+MatVecOp::MatVecOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
+    a = t1.impl();
+    b = t2.impl();
+    out = t3.impl();
+}
+Tensor MatVecOp::forward(const Tensor& t1, const Tensor& t2) {
+    return Tensor(kernels::matvec(t1.impl(), t2.impl()));
+}
+void MatVecOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b)));
+        if (a->grad_fn) {
+            a->grad_fn->backward();
+        }
+    }
+    if (b->requires_grad) {
+        kernels::add_inplace(b->grad->impl(), col_to_1d(kernels::matmul(kernels::transpose(a), out->grad->impl())));
+        if (b->grad_fn) {
+            b->grad_fn->backward();
+        }
+    }
+}
+
+DotOp::DotOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
+    a = t1.impl();
+    b = t2.impl();
+    out = t3.impl();
+}
+Tensor DotOp::forward(const Tensor& t1, const Tensor& t2) {
+    return Tensor(kernels::dot(t1.impl(), t2.impl()));
+}
+void DotOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->impl()->data[0], b));
+        if (a->grad_fn) {
+            a->grad_fn->backward();
+        }
+    }
+    if (b->requires_grad) {
+        kernels::add_inplace(b->grad->impl(), kernels::scalar_mul(out->grad->impl()->data[0], a));
+        if (b->grad_fn) {
+            b->grad_fn->backward();
+        }
+    }
+}
+
+TransposeOp::TransposeOp(const Tensor& t1, const Tensor& t2) {
+    a = t1.impl();
+    out = t2.impl();
+}
+Tensor TransposeOp::forward(const Tensor& t1) {
+    return Tensor(kernels::transpose(t1.impl()));
+}
+void TransposeOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), kernels::transpose(out->grad->impl()));
     }
 }

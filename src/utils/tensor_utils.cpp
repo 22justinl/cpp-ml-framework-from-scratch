@@ -34,13 +34,40 @@ bool check_tensorimpl_shape_match(std::shared_ptr<const TensorImpl> t1, std::sha
 
     return true;
 }
+
+std::string shape_to_string(const std::vector<size_t>& shape) {
+    if (shape.size() == 0) {
+        return "()";
+    }
+    std::string s = "(";
+    for (size_t i = 0; i < shape.size()-1; ++i) {
+        s += std::to_string(shape[i]) + ", ";
+    }
+    s += std::to_string(shape[shape.size()-1]) + ")";
+    return s;
+}
 void print_tensor(const Tensor& t1) {
+        std::cout << "[";
     for (size_t i = 0; i < t1.shape()[0]; ++i) {
+        std::cout << "[";
         for (size_t j = 0; j < t1.shape()[1]; ++j) {
             std::cout << t1({i, j}) << "\t\t";
         }
-        std::cout << std::endl;
+        std::cout << "]" << std::endl;
     }
+}
+
+std::vector<size_t> calculate_strides(std::vector<size_t> tensor_shape) {
+    std::vector strides = std::vector<size_t>(tensor_shape.size());
+    if (!tensor_shape.size()) {
+        return strides;
+    }
+
+    strides[tensor_shape.size()-1] = 1;
+    for (size_t i = tensor_shape.size()-2; i != SIZE_T_MAX; --i) {
+        strides[i] = strides[i+1] * tensor_shape[i+1];
+    }
+    return strides;
 }
 size_t calculate_offset(std::shared_ptr<const TensorImpl> impl, const std::vector<size_t>& indices) {
     if (indices.size() != impl->shape.size()) {

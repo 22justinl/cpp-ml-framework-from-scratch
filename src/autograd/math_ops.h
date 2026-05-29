@@ -53,10 +53,23 @@ private:
     std::shared_ptr<const TensorImpl> out;
 };
 
-// Tensor multiplication: (m, n)(n, l)
-class MatmulOp: public Operator {
+// Tensor scalar multiplication
+class ScalarMulOp: public Operator {
 public:
-    MatmulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3);
+    ScalarMulOp(float f, const Tensor& t1, const Tensor& t2);
+    static Tensor forward(float f, const Tensor& t1);
+
+    void backward() override;
+private:
+    float f;
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> out;
+};
+
+// Matrix multiplication: (m, n)(n, l)
+class MatMulOp: public Operator {
+public:
+    MatMulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3);
     static Tensor forward(const Tensor& t1, const Tensor& t2);
 
     void backward() override;
@@ -66,11 +79,39 @@ private:
     std::shared_ptr<const TensorImpl> out;
 };
 
+// Matrix vector multiplication (m, n)(n) or (m, n)(n, 1)
+class MatVecOp: public Operator {
+public:
+    MatVecOp(const Tensor& t1, const Tensor& t2, const Tensor& t3);
+    static Tensor forward(const Tensor& t1, const Tensor& t2);
 
-// // Tensor multiplication (m, n)(n) or (m, n)(n, 1)
-// Tensor matvec(const Tensor& a, const Tensor& b);
-//
-// // (n)(n) or (n,1)(n,1) or (1,n)(1,n)
-// Tensor dot(const Tensor& a, const Tensor& b);
-//
-// Tensor transpose(const Tensor& t);
+    void backward() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> b;
+    std::shared_ptr<const TensorImpl> out;
+};
+
+// 1D Tensor/vector dot product
+class DotOp: public Operator {
+public:
+    DotOp(const Tensor& t1, const Tensor& t2, const Tensor& t3);
+    static Tensor forward(const Tensor& t1, const Tensor& t2);
+
+    void backward() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> b;
+    std::shared_ptr<const TensorImpl> out;
+};
+
+class TransposeOp: public Operator {
+public:
+    TransposeOp(const Tensor& t1, const Tensor& t2);
+    static Tensor forward(const Tensor& t1);
+
+    void backward() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> out;
+};

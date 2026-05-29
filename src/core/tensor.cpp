@@ -76,6 +76,16 @@ Tensor Tensor::operator*(const Tensor& other) const {
 Tensor Tensor::operator/(const Tensor& other) const {
     return div(*this, other);
 }
+Tensor Tensor::operator*(float f) const {
+    return scalar_mul(f, *this);
+}
+Tensor operator*(float f, const Tensor& t) {
+    return f * t;
+}
+Tensor Tensor::operator/(float f) const {
+    if (f == 0) { throw std::runtime_error("Divide by zero error"); }
+    return scalar_mul(1/f, *this);
+}
 Tensor& Tensor::operator=(const Tensor& other) {
     impl_ = other.impl_;
     return *this;
@@ -89,12 +99,24 @@ Tensor& Tensor::operator-=(const Tensor& other) {
     return *this;
 }
 Tensor& Tensor::operator*=(const Tensor& other) {
-    *this = mul(*this, other);
+    *this = *this * other;
     return *this;
 }
 Tensor& Tensor::operator/=(const Tensor& other) {
-    *this = div(*this, other);
+    *this = *this/other;
     return *this;
+}
+Tensor& Tensor::operator*=(float f) {
+    *this = *this * f;
+    return *this;
+}
+Tensor& Tensor::operator/=(float f)  {
+    *this = *this / f;
+    return *this;
+}
+
+Tensor Tensor::operator-() const {
+    return -1.f * *this;
 }
 
 float& Tensor::at(const std::initializer_list<size_t> indices) { return at(std::vector(indices)); }
@@ -127,15 +149,7 @@ Tensor& Tensor::grad() {
 const std::vector<size_t>& Tensor::shape() const { return impl_->shape; }
 std::vector<size_t>& Tensor::shape() { return impl_->shape; }
 std::string Tensor::shape_string() const {
-    if (impl_->shape.size() == 0) {
-        return "()";
-    }
-    std::string s = "(";
-    for (size_t i = 0; i < impl_->shape.size()-1; ++i) {
-        s += std::to_string(impl_->shape[i]) + ", ";
-    }
-    s += std::to_string(impl_->shape[impl_->shape.size()-1]) + ")";
-    return s;
+    return shape_to_string(impl_->shape);
 }
 
 const std::vector<size_t>& Tensor::strides_raw() const { return impl_->strides; }
@@ -188,15 +202,3 @@ void Tensor::backward(const Tensor& out_grad) {
 
 // Private functions
 
-std::vector<size_t> Tensor::calculate_strides(std::vector<size_t> tensor_shape) {
-    std::vector strides = std::vector<size_t>(tensor_shape.size());
-    if (!tensor_shape.size()) {
-        return strides;
-    }
-
-    strides[tensor_shape.size()-1] = 1;
-    for (size_t i = tensor_shape.size()-2; i != SIZE_T_MAX; --i) {
-        strides[i] = strides[i+1] * tensor_shape[i+1];
-    }
-    return strides;
-}

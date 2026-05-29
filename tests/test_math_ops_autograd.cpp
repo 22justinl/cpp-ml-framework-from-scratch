@@ -88,7 +88,33 @@ TEST_CASE("Tensor matmul autograd") {
     res.backward();
     Tensor expected1({30,46,62,30,46,62}, {2,3});
     Tensor expected2({3,3,3,3,5,5,5,5,7,7,7,7}, {3,4});
-    check_tensor_equal(t1.grad(), expected1);
-    check_tensor_equal(t2.grad(), expected2);
+    CHECK(check_tensor_equal(t1.grad(), expected1));
+    CHECK(check_tensor_equal(t2.grad(), expected2));
+}
+
+TEST_CASE("Tensor matvec autograd") {
+    Tensor t1({1,2,3,4,5,6,7,8,9,10,11,12}, {3, 4}, true);
+    Tensor t2({10, 20, 30, 40}, {4}, true);
+
+    Tensor res = matvec(t1, t2);
+    t1.zero_grad();
+    t2.zero_grad();
+    res.backward();
+    Tensor expected1({10, 20, 30, 40, 10, 20, 30, 40, 10, 20, 30, 40}, {3, 4});
+    Tensor expected2({15,18,21,24}, {4});
+    CHECK(check_tensor_equal(t1.grad(), expected1));
+    CHECK(check_tensor_equal(t2.grad(), expected2));
+}
+
+TEST_CASE("Tensor dot autograd") {
+    Tensor t1({1,2,3,4}, {4}, true);
+    Tensor t2({1,2,3,4}, {4}, true);
+
+    Tensor res1 = dot(t1, t2);
+    t1.zero_grad();
+    t2.zero_grad();
+    res1.backward();
+    CHECK(check_tensor_equal(t1.grad(), t2));
+    CHECK(check_tensor_equal(t2.grad(), t1));
 }
 

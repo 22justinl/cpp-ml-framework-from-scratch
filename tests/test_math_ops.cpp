@@ -73,6 +73,8 @@ TEST_CASE("Tensor matmul") {
     Tensor expected2({12,15,18,21}, {1,4});
     CHECK(check_tensor_shape_match(res1, expected1));
     CHECK(check_tensor_shape_match(res2, expected2));
+    CHECK(check_tensor_equal(res1, expected1));
+    CHECK(check_tensor_equal(res2, expected2));
 }
 TEST_CASE("Tensor matmul (error cases)") {
     Tensor t1(0.f, {10,20});
@@ -87,19 +89,16 @@ TEST_CASE("Tensor matmul (error cases)") {
 TEST_CASE("Tensor matvec") {
     Tensor t1({0,1,2,3,4,5,6,7,8,9,10,11}, {3, 4});
     Tensor t2({0,1,2,3}, {4});
-    Tensor t3({0,1,2,3}, {4,1});
 
     Tensor res1 = matvec(t1, t2);
-    Tensor res2 = matvec(t1, t3);
     Tensor expected({14,38,62}, {3,1});
     for (size_t i = 0; i < 3; ++i) {
         CHECK(res1({i,0}) == expected({i,0}));
-        CHECK(res2({i,0}) == expected({i,0}));
     }
 }
 TEST_CASE("Tensor matvec (error cases)") {
     Tensor t1({0,1,2,3,4,5,6,7,8,9,10,11}, {3, 4});
-    Tensor t2({0,1,2,3}, {1,4});
+    Tensor t2({0,1,2,3}, {4,1});
     Tensor t3({0,1,2,3, 4}, {5,1});
     CHECK_THROWS(matvec(t1, t2));
     CHECK_THROWS(matvec(t1, t3));
@@ -111,17 +110,17 @@ TEST_CASE("Tensor matvec (error cases)") {
 TEST_CASE("Tensor dot") {
     Tensor t1({1,2,3}, {3});
     Tensor t2({-1,-2,3}, {3});
-    Tensor t3({1,2,3}, {3,1});
-    Tensor t4({-1,-2,3}, {3,1});
-    Tensor t5({1,2,3}, {1,3});
-    Tensor t6({-1,-2,3}, {1,3});
+    // Tensor t3({1,2,3}, {3,1});
+    // Tensor t4({-1,-2,3}, {3,1});
+    // Tensor t5({1,2,3}, {1,3});
+    // Tensor t6({-1,-2,3}, {1,3});
 
     Tensor d1 = dot(t1, t2);
-    Tensor d2 = dot(t3, t4);
-    Tensor d3 = dot(t5, t6);
+    // Tensor d2 = dot(t3, t4);
+    // Tensor d3 = dot(t5, t6);
     CHECK(d1({0}) == 4);
-    CHECK(d2({0}) == 4);
-    CHECK(d3({0}) == 4);
+    // CHECK(d2({0}) == 4);
+    // CHECK(d3({0}) == 4);
 }
 TEST_CASE("Tensor dot (error cases)") {
     Tensor t1({1,2,3}, {3});

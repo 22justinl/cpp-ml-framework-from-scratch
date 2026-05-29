@@ -29,12 +29,18 @@ public:
     Tensor operator-(const Tensor& other) const;
     Tensor operator*(const Tensor& other) const;
     Tensor operator/(const Tensor& other) const;
+    Tensor operator*(float f) const;
+    Tensor operator/(float f) const;
 
     Tensor& operator=(const Tensor& other);
     Tensor& operator+=(const Tensor& other);
     Tensor& operator-=(const Tensor& other);
     Tensor& operator*=(const Tensor& other);
     Tensor& operator/=(const Tensor& other);
+    Tensor& operator*=(float f);
+    Tensor& operator/=(float f);
+
+    Tensor operator-() const;
 
     float& at(const std::initializer_list<size_t> indices);
     float& at(const std::vector<size_t> indices);
@@ -69,7 +75,6 @@ public:
 
 private:
     std::shared_ptr<TensorImpl> impl_;
-    static std::vector<size_t> calculate_strides(std::vector<size_t> tensor_shape);
 };
 
 struct TensorImpl {
@@ -92,3 +97,5 @@ struct TensorImpl {
     std::unique_ptr<Tensor> grad;
     std::shared_ptr<Operator> grad_fn = nullptr;
 };
+
+Tensor operator*(float f, const Tensor& t);
