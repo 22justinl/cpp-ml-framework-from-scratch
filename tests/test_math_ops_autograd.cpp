@@ -78,6 +78,15 @@ TEST_CASE("Tensor div autograd") {
     }
 }
 
+TEST_CASE("Tensor scalar_mul") {
+    float f1 = 2;
+    Tensor t1({1,2,3,4,5,6,7,8},{2,4}, true);
+    Tensor res1 = scalar_mul(f1, t1);
+    t1.zero_grad();
+    res1.backward();
+    CHECK(check_tensor_equal(t1.grad(), Tensor({2,2,2,2,2,2,2,2}, {2,4})));
+}
+
 TEST_CASE("Tensor matmul autograd") {
     Tensor t1({0,1,2,3,4,5}, {2, 3}, true);
     Tensor t2({6,7,8,9,10,11,12,13,14,15,16,17}, {3, 4}, true);
@@ -134,5 +143,37 @@ TEST_CASE("Tensor negative autograd") {
     res1.backward();
     CHECK(check_tensor_equal(t1.grad(), Tensor(-1, {2,3})));
 }
+
+// TEST_CASE("Tensor inplace add autograd") {
+//     Tensor t1({1,2,3,4,5,6}, {2,3}, true);
+//     t1 += Tensor({1,-1,2,-2,3,-3}, {2,3});
+//     t1.zero_grad();
+//     t1.backward();
+//     CHECK(check_tensor_equal(t1.grad(), Tensor({1,1,1,1,1,1,1,1},{2,3})));
+// }
+//
+// TEST_CASE("Tensor inplace sub autograd") {
+//     Tensor t1({1,2,3,4,5,6}, {2,3}, true);
+//     t1 -= Tensor({1,-1,2,-2,3,-3}, {2,3});
+//     t1.zero_grad();
+//     t1.backward();
+//     CHECK(check_tensor_equal(t1.grad(), Tensor({1,1,1,1,1,1,1,1},{2,3})));
+// }
+//
+// TEST_CASE("Tensor inplace mul autograd") {
+//     Tensor t1({1,2,3,4,5,6}, {2,3}, true);
+//     t1 *= Tensor({1,-1,2,-2,3,-3}, {2,3});
+//     t1.zero_grad();
+//     t1.backward();
+//     CHECK(check_tensor_equal(t1.grad(), Tensor({1,-1,2,-2,3,-3},{2,3})));
+// }
+//
+// TEST_CASE("Tensor inplace div autograd") {
+//     Tensor t1({1,2,3,4,5,6}, {2,3}, true);
+//     t1 /= Tensor({1,-1,2,-2,3,-3}, {2,3});
+//     t1.zero_grad();
+//     t1.backward();
+//     CHECK(check_tensor_equal(t1.grad(), Tensor({1,-1,1.0/2,-1.0/2,1.0/3,-1.0/3},{2,3})));
+// }
 
 // TODO: grad for +=, -=, *=, /=

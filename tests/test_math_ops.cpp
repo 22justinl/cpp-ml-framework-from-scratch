@@ -64,6 +64,21 @@ TEST_CASE("Tensor div") {
     CHECK_THROWS(t2/t3);
 }
 
+TEST_CASE("Tensor scalar_mul") {
+    float f1 = 2;
+    float f2 = -3;
+    Tensor t1({1,2,3,4},{4});
+    Tensor t2({1,2,3,4,5,6,7,8},{2,4});
+    Tensor res1 = scalar_mul(f1, t1);
+    Tensor res2 = scalar_mul(t1, f2);
+    Tensor res3 = scalar_mul(f2, t2);
+    Tensor res4 = scalar_mul(t2, f1);
+    CHECK(check_tensor_equal(res1, Tensor({2,4,6,8},{4})));
+    CHECK(check_tensor_equal(res2, Tensor({-3,-6,-9,-12},{4})));
+    CHECK(check_tensor_equal(res3, Tensor({-3,-6,-9,-12,-15,-18,-21,-24},{2,4})));
+    CHECK(check_tensor_equal(res4, Tensor({2,4,6,8,10,12,14,16},{2,4})));
+}
+
 TEST_CASE("Tensor matmul") {
     Tensor t1({0,1,2,3,4,5,6,7,8,9,10,11}, {3,4});
     Tensor t2({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}, {4,5});
@@ -111,17 +126,8 @@ TEST_CASE("Tensor matvec (error cases)") {
 TEST_CASE("Tensor dot") {
     Tensor t1({1,2,3}, {3});
     Tensor t2({-1,-2,3}, {3});
-    // Tensor t3({1,2,3}, {3,1});
-    // Tensor t4({-1,-2,3}, {3,1});
-    // Tensor t5({1,2,3}, {1,3});
-    // Tensor t6({-1,-2,3}, {1,3});
-
     Tensor d1 = dot(t1, t2);
-    // Tensor d2 = dot(t3, t4);
-    // Tensor d3 = dot(t5, t6);
     CHECK(d1({0}) == 4);
-    // CHECK(d2({0}) == 4);
-    // CHECK(d3({0}) == 4);
 }
 TEST_CASE("Tensor dot (error cases)") {
     Tensor t1({1,2,3}, {3});
@@ -164,4 +170,26 @@ TEST_CASE("Tensor negative") {
     CHECK(check_tensor_equal(res1, expected1));
 }
 
-// TODO: scalar_mul
+TEST_CASE("Tensor inplace add") {
+    Tensor t1({1,2,3,4,5,6}, {2,3});
+    t1 += Tensor({1,-1,2,-2,3,-3}, {2,3});
+    CHECK(check_tensor_equal(t1, Tensor({2,1,5,2,8,3}, {2,3})));
+}
+
+TEST_CASE("Tensor inplace sub") {
+    Tensor t1({1,2,3,4,5,6}, {2,3});
+    t1 -= Tensor({1,-1,2,-2,3,-3}, {2,3});
+    CHECK(check_tensor_equal(t1, Tensor({0,3,1,6,2,9}, {2,3})));
+}
+
+TEST_CASE("Tensor inplace mul") {
+    Tensor t1({1,2,3,4,5,6}, {2,3});
+    t1 *= Tensor({1,-1,2,-2,3,-3}, {2,3});
+    CHECK(check_tensor_equal(t1, Tensor({1,-2,6,-8,15,-18}, {2,3})));
+}
+
+TEST_CASE("Tensor inplace div") {
+    Tensor t1({1,2,3,4,5,6}, {2,3});
+    t1 /= Tensor({1,-1,2,-2,3,-3}, {2,3});
+    CHECK(check_tensor_equal(t1, Tensor({1,-2,3.0/2,-2,5.0/3,-2}, {2,3})));
+}
