@@ -7,6 +7,17 @@ bool check_tensor_equal(const Tensor& t1, const Tensor& t2) {
     if (!check_tensor_shape_match(t1, t2)) {
         return false;
     }
+    if (t1.shape().size() == 0) {
+        return true;
+    }
+    if (t1.shape().size() == 1) {
+        for (size_t i = 0; i < t1.shape()[1]; ++i) {
+            if (t1({i}) != t2({i})) {
+                return false;
+            }
+        }
+        return true;
+    }
     for (size_t i = 0; i < t1.shape()[0]; ++i) {
         for (size_t j = 0; j < t1.shape()[1]; ++j) {
             if (t1({i, j}) != t2({i, j})) {
@@ -26,6 +37,7 @@ bool check_tensorimpl_shape_match(std::shared_ptr<const TensorImpl> t1, std::sha
     if (t1_shape.size() != t2_shape.size()) {
         return false;
     }
+
     for (size_t i = 0; i < t1_shape.size(); ++i) {
         if (t1_shape[i] != t2_shape[i]) {
             return false;

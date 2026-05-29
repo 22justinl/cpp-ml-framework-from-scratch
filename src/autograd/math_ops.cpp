@@ -1,5 +1,7 @@
 #include "autograd/math_ops.h"
 #include "kernels/math_ops.h"
+#include "utils/tensor_utils.h"
+#include <iostream>
 
 AddOp::AddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     a = t1.impl();
@@ -94,8 +96,7 @@ void DivOp::backward() {
     }
 }
 
-ScalarMulOp::ScalarMulOp(float f, const Tensor& t1, const Tensor& t2) {
-    f = f;
+ScalarMulOp::ScalarMulOp(float f, const Tensor& t1, const Tensor& t2): f(f) {
     a = t1.impl();
     out = t2.impl();
 }

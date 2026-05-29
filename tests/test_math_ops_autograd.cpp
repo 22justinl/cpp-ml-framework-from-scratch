@@ -118,3 +118,21 @@ TEST_CASE("Tensor dot autograd") {
     CHECK(check_tensor_equal(t2.grad(), t1));
 }
 
+TEST_CASE("Tensor transpose autograd") {
+    Tensor t1({1,2,3,4,5,6,7,8}, {2,4}, true);
+    Tensor res1 = transpose(t1);
+    t1.zero_grad();
+    res1.backward(Tensor({1,2,3,4,5,6,7,8},{4,2}));
+    CHECK(check_tensor_equal(t1.grad(), Tensor({1,3,5,7,2,4,6,8}, {2,4})));
+}
+
+TEST_CASE("Tensor negative autograd") {
+    Tensor t1({1,2,3,-1,-2,0},{2,3}, true);
+    Tensor res1 = -t1;
+    Tensor expected1({-1,-2,-3,1,2,0},{2,3});
+    t1.zero_grad();
+    res1.backward();
+    CHECK(check_tensor_equal(t1.grad(), Tensor(-1, {2,3})));
+}
+
+// TODO: grad for +=, -=, *=, /=

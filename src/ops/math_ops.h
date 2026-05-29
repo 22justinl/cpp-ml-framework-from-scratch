@@ -11,7 +11,7 @@ Tensor mul(const Tensor& t1, const Tensor& t2);
 // Element-wise division
 Tensor div(const Tensor& t1, const Tensor& t2);
 // Scalar multiplication
-Tensor scalar_mul(Tensor& t1, float f);
+Tensor scalar_mul(const Tensor& t1, float f);
 Tensor scalar_mul(float f, const Tensor& t1);
 
 // Tensor multiplication: (m, n)(n, l)

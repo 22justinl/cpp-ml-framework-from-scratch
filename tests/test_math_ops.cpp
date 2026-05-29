@@ -3,6 +3,7 @@
 #include "core/tensor.h"
 #include "ops/math_ops.h"
 #include "utils/tensor_utils.h"
+#include <iostream>
 
 TEST_CASE("Tensor add") {
     Tensor t1({0,1,2,3,4,5,6,7}, {2,4});
@@ -144,4 +145,23 @@ TEST_CASE("Tensor transpose") {
     Tensor t11({0,1,2,3,4},{5,1});
     Tensor t12({0,1,2,3,4},{1,5});
     Tensor t2({0,1,2,3,4,5,6,7,8,9,10,11}, {3,4});
+    Tensor res0 = transpose(t0);
+    Tensor res1 = transpose(t1);
+    Tensor res11 = transpose(t11);
+    Tensor res12 = transpose(t12);
+    Tensor res2 = transpose(t2);
+    CHECK(check_tensor_equal(res0, Tensor()));
+    CHECK(check_tensor_equal(res1, Tensor({0,1,2,3,4}, {1,5})));
+    CHECK(check_tensor_equal(res11, Tensor({0,1,2,3,4}, {1,5})));
+    CHECK(check_tensor_equal(res12, Tensor({0,1,2,3,4}, {5,1})));
+    CHECK(check_tensor_equal(res2, Tensor({0,4,8,1,5,9,2,6,10,3,7,11}, {4,3})));
 }
+
+TEST_CASE("Tensor negative") {
+    Tensor t1({1,2,3,-1,-2,0},{2,3});
+    Tensor expected1({-1,-2,-3,1,2,0},{2,3});
+    Tensor res1 = -t1;
+    CHECK(check_tensor_equal(res1, expected1));
+}
+
+// TODO: scalar_mul

@@ -77,10 +77,10 @@ Tensor Tensor::operator/(const Tensor& other) const {
     return div(*this, other);
 }
 Tensor Tensor::operator*(float f) const {
-    return scalar_mul(f, *this);
+    return scalar_mul(*this, f);
 }
 Tensor operator*(float f, const Tensor& t) {
-    return f * t;
+    return scalar_mul(f, t);
 }
 Tensor Tensor::operator/(float f) const {
     if (f == 0) { throw std::runtime_error("Divide by zero error"); }

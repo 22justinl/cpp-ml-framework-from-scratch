@@ -26,7 +26,11 @@ Tensor div(const Tensor& t1, const Tensor& t2) {
 Tensor scalar_mul(const Tensor& t1, float f) { return scalar_mul(f, t1); }
 Tensor scalar_mul(float f, const Tensor& t1) {
     Tensor t2 = ScalarMulOp::forward(f, t1);
-    return binop_helper<DivOp>(t1, t2);
+    if (t1.requires_grad()) {
+        std::shared_ptr<ScalarMulOp> op = std::make_shared<ScalarMulOp>(f, t1, t2);
+        t2.set_grad_fn(op);
+    }
+    return t2;
 }
 
 // Tensor multiplication: (m, n)(n, l)
