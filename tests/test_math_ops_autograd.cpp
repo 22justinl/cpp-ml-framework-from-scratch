@@ -179,7 +179,7 @@ TEST_CASE("Tensor negative autograd") {
 // }
 
 
-TEST_CASE("Tensor power") {
+TEST_CASE("Tensor power autograd") {
     Tensor t1({0,1,2,3,4,5}, {2,3}, true);
     Tensor t2 = power(t1, 2);
     t1.zero_grad();
@@ -187,7 +187,7 @@ TEST_CASE("Tensor power") {
     CHECK(check_tensor_equal(t1.grad(), Tensor({0,2,4,6,8,10}, {2,3})));
 }
 
-TEST_CASE("Tensor exp") {
+TEST_CASE("Tensor exp autograd") {
     Tensor t1({0, 1, -1}, {3}, true);
     Tensor t2 = exp(t1);
     t1.zero_grad();
@@ -195,10 +195,10 @@ TEST_CASE("Tensor exp") {
     CHECK(check_tensor_equal(t1.grad(), t2));
 }
 
-TEST_CASE("Tensor log") {
+TEST_CASE("Tensor log autograd") {
     Tensor t1({1,2,3}, {3}, true);
     Tensor t2 = log(t1);
     t1.zero_grad();
     t2.backward();
-    CHECK(check_tensor_equal(t1.grad(), Tensor({1, 1.0/2, 1.0/3}, {3})));
+    CHECK(check_tensor_equal(t1.grad(), Tensor({1.0, 1.0/2, 1.0/3}, {3})));
 }

@@ -4,6 +4,7 @@
 #include "ops/math_ops.h"
 #include "utils/tensor_utils.h"
 
+#include <iostream>
 #include <numbers>
 
 TEST_CASE("Tensor add") {
@@ -208,8 +209,8 @@ TEST_CASE("Tensor exp") {
 }
 
 TEST_CASE("Tensor log") {
-    Tensor t1({1, std::numbers::e_v<float>, 1.0/std::numbers::e_v<float>}, {3});
+    Tensor t1({1, std::numbers::e_v<float>, 1.f/std::numbers::e_v<float>}, {3});
     Tensor t2 = log(t1);
-    CHECK(check_tensor_equal(t2, Tensor({0, 1, -1}, {3})));
+    CHECK(check_tensor_equal(t2, Tensor({0, 1.0, -1.0}, {3})));
     // CHECK_THROWS(log(Tensor({0, -1},{2}))); NOTE: Should this throw?
 }

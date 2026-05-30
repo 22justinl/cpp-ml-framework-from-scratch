@@ -1,7 +1,11 @@
 #include "utils/tensor_utils.h"
 
+#include <cmath>
 #include <iostream>
 #include <vector>
+
+// NOTE: tolerance for float comparisons
+float eps = 1e-7;
 
 bool check_tensor_equal(const Tensor& t1, const Tensor& t2) {
     if (!check_tensor_shape_match(t1, t2)) {
@@ -11,8 +15,8 @@ bool check_tensor_equal(const Tensor& t1, const Tensor& t2) {
         return true;
     }
     if (t1.shape().size() == 1) {
-        for (size_t i = 0; i < t1.shape()[1]; ++i) {
-            if (t1({i}) != t2({i})) {
+        for (size_t i = 0; i < t1.shape()[0]; ++i) {
+            if (std::fabs(t1({i}) - t2({i})) >= eps) {
                 return false;
             }
         }
@@ -20,7 +24,7 @@ bool check_tensor_equal(const Tensor& t1, const Tensor& t2) {
     }
     for (size_t i = 0; i < t1.shape()[0]; ++i) {
         for (size_t j = 0; j < t1.shape()[1]; ++j) {
-            if (t1({i, j}) != t2({i, j})) {
+            if (std::fabs(t1({i, j}) - t2({i, j})) >= eps) {
                 return false;
             }
         }
@@ -123,6 +127,9 @@ size_t calculate_n_el(const std::vector<size_t>& shape) {
     return n_el;
 }
 std::shared_ptr<TensorImpl> create_tensorimpl(const std::vector<float>& data, const std::vector<size_t>& shape, const std::vector<size_t>& strides, bool requires_grad) {
+    if (calculate_n_el(shape) != data.size()) {
+        throw std::runtime_error("Not enough data to initialize tensor");
+    }
     if (requires_grad) {
         return std::make_shared<TensorImpl>(data, shape, strides, requires_grad, new Tensor(0.f, shape));
     }

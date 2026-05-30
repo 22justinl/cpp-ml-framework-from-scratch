@@ -1,16 +1,7 @@
 #include "ops/math_ops.h"
-#include "autograd/math_ops.h"
-#include "utils/tensor_utils.h"
 
-template <class BinOp>
-Tensor binop_helper(const Tensor& t1, const Tensor& t2) {
-    Tensor t3 = BinOp::forward(t1, t2);
-    if (t1.requires_grad() || t2.requires_grad()) {
-        std::shared_ptr<BinOp> op = std::make_shared<BinOp>(t1, t2, t3);
-        t3.set_grad_fn(op);
-    }
-    return t3;
-}
+#include "autograd/math_ops.h"
+#include "utils/op_utils.h"
 
 Tensor add(const Tensor& t1, const Tensor& t2) {
     return binop_helper<AddOp>(t1, t2);
@@ -46,12 +37,7 @@ Tensor dot(const Tensor& t1, const Tensor& t2) {
     return binop_helper<DotOp>(t1, t2);
 }
 Tensor transpose(const Tensor& t1) {
-    Tensor t2 = TransposeOp::forward(t1);
-    if (t1.requires_grad()) {
-        std::shared_ptr<TransposeOp> op = std::make_shared<TransposeOp>(t1, t2);
-        t2.set_grad_fn(op);
-    }
-    return t2;
+    return monop_helper<TransposeOp>(t1);
 }
 Tensor power(const Tensor& t1, float f) {
     Tensor t2 = PowerOp::forward(t1, f);
@@ -62,18 +48,8 @@ Tensor power(const Tensor& t1, float f) {
     return t2;
 }
 Tensor exp(const Tensor& t1) {
-    Tensor t2 = ExpOp::forward(t1);
-    if (t1.requires_grad()) {
-        std::shared_ptr<ExpOp> op = std::make_shared<ExpOp>(t1, t2);
-        t2.set_grad_fn(op);
-    }
-    return t2;
+    return monop_helper<ExpOp>(t1);
 }
 Tensor log(const Tensor& t1) {
-    Tensor t2 = LogOp::forward(t1);
-    if (t1.requires_grad()) {
-        std::shared_ptr<LogOp> op = std::make_shared<LogOp>(t1, t2);
-        t2.set_grad_fn(op);
-    }
-    return t2;
+    return monop_helper<LogOp>(t1);
 }
