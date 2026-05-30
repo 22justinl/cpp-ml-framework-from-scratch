@@ -115,3 +115,37 @@ private:
     std::shared_ptr<const TensorImpl> a;
     std::shared_ptr<const TensorImpl> out;
 };
+
+class PowerOp: public Operator {
+public:
+    PowerOp(const Tensor& t1, float x, const Tensor& t2);
+    static Tensor forward(const Tensor& t1, float x);
+
+    void backward() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    float x;
+    std::shared_ptr<const TensorImpl> out;
+};
+
+class ExpOp: public Operator {
+public:
+    ExpOp(const Tensor& t1, const Tensor& t2);
+    static Tensor forward(const Tensor& t1);
+
+    void backward() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> out;
+};
+// Natural log
+class LogOp: public Operator {
+public:
+    LogOp(const Tensor& t1, const Tensor& t2);
+    static Tensor forward(const Tensor& t1);
+
+    void backward() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> out;
+};

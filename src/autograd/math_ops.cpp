@@ -1,7 +1,5 @@
 #include "autograd/math_ops.h"
 #include "kernels/math_ops.h"
-#include "utils/tensor_utils.h"
-#include <iostream>
 
 AddOp::AddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     a = t1.impl();
@@ -191,5 +189,56 @@ Tensor TransposeOp::forward(const Tensor& t1) {
 void TransposeOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::transpose(out->grad->impl()));
+        if (a->grad_fn) {
+            a->grad_fn->backward();
+        }
+    }
+}
+
+PowerOp::PowerOp(const Tensor& t1, float x, const Tensor& t2): x(x) {
+    a = t1.impl();
+    out = t2.impl();
+}
+Tensor PowerOp::forward(const Tensor& t1, float x) {
+    return Tensor(kernels::power(t1.impl(), x));
+}
+void PowerOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), kernels::mul(kernels::scalar_mul(x, kernels::power(a, x-1)), out->grad->impl()));
+        if (a->grad_fn) {
+            a->grad_fn->backward();
+        }
+    }
+}
+
+ExpOp::ExpOp(const Tensor& t1, const Tensor& t2) {
+    a = t1.impl();
+    out = t2.impl();
+}
+Tensor ExpOp::forward(const Tensor& t1) {
+    return Tensor(kernels::exp(t1.impl()));
+}
+void ExpOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), out);
+        if (a->grad_fn) {
+            a->grad_fn->backward();
+        }
+    }
+}
+
+LogOp::LogOp(const Tensor& t1, const Tensor& t2) {
+    a = t1.impl();
+    out = t2.impl();
+}
+Tensor LogOp::forward(const Tensor& t1) {
+    return Tensor(kernels::log(t1.impl()));
+}
+void LogOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), kernels::div(1, a));
+        if (a->grad_fn) {
+            a->grad_fn->backward();
+        }
     }
 }

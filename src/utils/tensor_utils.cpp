@@ -59,7 +59,20 @@ std::string shape_to_string(const std::vector<size_t>& shape) {
     return s;
 }
 void print_tensor(const Tensor& t1) {
+    if (t1.shape().size() == 0) {
+        std::cout << "[]" << std::endl;
+        return;
+    }
+    if (t1.shape().size() == 1) {
         std::cout << "[";
+        for (size_t i = 0; i < t1.shape()[0]; ++i) {
+            std::cout << t1({i}) << "\t\t";
+        }
+        std::cout << "]" << std::endl;
+        return;
+    }
+
+    std::cout << "[";
     for (size_t i = 0; i < t1.shape()[0]; ++i) {
         std::cout << "[";
         for (size_t j = 0; j < t1.shape()[1]; ++j) {
@@ -69,7 +82,7 @@ void print_tensor(const Tensor& t1) {
     }
 }
 
-std::vector<size_t> calculate_strides(std::vector<size_t> tensor_shape) {
+std::vector<size_t> calculate_strides(const std::vector<size_t>& tensor_shape) {
     std::vector strides = std::vector<size_t>(tensor_shape.size());
     if (!tensor_shape.size()) {
         return strides;
@@ -94,6 +107,20 @@ size_t calculate_offset(std::shared_ptr<const TensorImpl> impl, const std::vecto
         offset += impl->strides[i] * idx;
     }
     return offset;
+}
+size_t calculate_n_el(const std::vector<size_t>& shape) {
+    if (shape.size() == 0) {
+        return 0;
+    }
+    size_t n_el = 0;
+    n_el = shape[0];
+    for (size_t i = 1; i < shape.size(); ++i) {
+        n_el *= shape[i];
+        if (n_el == 0) {
+            return 0;
+        }
+    }
+    return n_el;
 }
 std::shared_ptr<TensorImpl> create_tensorimpl(const std::vector<float>& data, const std::vector<size_t>& shape, const std::vector<size_t>& strides, bool requires_grad) {
     if (requires_grad) {

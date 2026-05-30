@@ -3,7 +3,8 @@
 #include "core/tensor.h"
 #include "ops/math_ops.h"
 #include "utils/tensor_utils.h"
-#include <iostream>
+
+#include <numbers>
 
 TEST_CASE("Tensor add") {
     Tensor t1({0,1,2,3,4,5,6,7}, {2,4});
@@ -192,4 +193,23 @@ TEST_CASE("Tensor inplace div") {
     Tensor t1({1,2,3,4,5,6}, {2,3});
     t1 /= Tensor({1,-1,2,-2,3,-3}, {2,3});
     CHECK(check_tensor_equal(t1, Tensor({1,-2,3.0/2,-2,5.0/3,-2}, {2,3})));
+}
+
+TEST_CASE("Tensor power") {
+    Tensor t1({0,1,2,3,4,5}, {2,3});
+    Tensor t2 = power(t1, 2);
+    CHECK(check_tensor_equal(t2, Tensor({0,1,4,9,16,25}, {2,3})));
+}
+
+TEST_CASE("Tensor exp") {
+    Tensor t1({0, 1, -1}, {3});
+    Tensor t2 = exp(t1);
+    CHECK(check_tensor_equal(t2, Tensor({1, std::numbers::e_v<float>, 1.0/std::numbers::e_v<float>}, {3})));
+}
+
+TEST_CASE("Tensor log") {
+    Tensor t1({1, std::numbers::e_v<float>, 1.0/std::numbers::e_v<float>}, {3});
+    Tensor t2 = log(t1);
+    CHECK(check_tensor_equal(t2, Tensor({0, 1, -1}, {3})));
+    // CHECK_THROWS(log(Tensor({0, -1},{2}))); NOTE: Should this throw?
 }

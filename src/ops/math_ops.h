@@ -23,6 +23,10 @@ Tensor matvec(const Tensor& t1, const Tensor& t2);
 // (n)(n) or (n,1)(n,1) or (1,n)(1,n)
 Tensor dot(const Tensor& t1, const Tensor& t2);
 
-Tensor transpose(const Tensor& t);
+Tensor transpose(const Tensor& t1);
 
-// TODO: exp, log, power, sqrt, sin, cos, tan
+Tensor power(const Tensor& t1, float f);
+Tensor exp(const Tensor& t1);
+Tensor log(const Tensor& t1);
+
+// TODO: sin, cos, tan

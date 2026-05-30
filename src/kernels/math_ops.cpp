@@ -1,5 +1,8 @@
 #include "kernels/math_ops.h"
+
 #include "utils/tensor_utils.h"
+
+#include <numbers>
 
 namespace kernels {
 
@@ -26,6 +29,13 @@ void sub_inplace(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl
 
     for (size_t i = 0; i < a_data.size(); ++i) {
         a_data[i] -= b_data[i];
+    }
+}
+
+void zero_inplace(std::shared_ptr<TensorImpl> a) {
+    std::vector<float>& a_data = a->data;
+    for (size_t i = 0; i < a_data.size(); ++i) {
+        a_data[i] = 0;
     }
 }
 
@@ -85,6 +95,19 @@ std::shared_ptr<TensorImpl> div(std::shared_ptr<const TensorImpl> a, std::shared
             throw std::runtime_error("Divide by zero error");
         }
         res_data[i] = a_data[i] / b_data[i];
+    }
+    return res;
+}
+std::shared_ptr<TensorImpl> div(float f, std::shared_ptr<const TensorImpl> a) {
+    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), f), a->shape, a->strides, a->requires_grad);
+    const std::vector<float>& a_data = a->data;
+    std::vector<float>& res_data = res->data;
+
+    for (size_t i = 0; i < a_data.size(); ++i) {
+        if (!a_data[i]) {
+            throw std::runtime_error("Divide by zero error");
+        }
+        res_data[i] /= a_data[i];
     }
     return res;
 }
@@ -180,6 +203,28 @@ std::shared_ptr<TensorImpl> transpose(std::shared_ptr<const TensorImpl> a) {
         for (size_t j = 0; j < a->shape[1]; ++j) {
             res->data[calculate_offset(res, {j, i})] = a->data[calculate_offset(a, {i, j})];
         }
+    }
+    return res;
+}
+
+std::shared_ptr<TensorImpl> power(std::shared_ptr<const TensorImpl> a, float x) {
+    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->data), a->shape, a->strides, a->requires_grad);
+    for (size_t i = 0; i < a->data.size(); ++i) {
+        res->data[i] = std::pow(res->data[i], x);
+    }
+    return res;
+}
+std::shared_ptr<TensorImpl> exp(std::shared_ptr<const TensorImpl> a) {
+    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->data), a->shape, a->strides, a->requires_grad);
+    for (size_t i = 0; i < a->data.size(); ++i) {
+        res->data[i] = std::pow(std::numbers::e_v<float>, a->data[i]);
+    }
+    return res;
+}
+std::shared_ptr<TensorImpl> log(std::shared_ptr<const TensorImpl> a) {
+    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->data), a->shape, a->strides, a->requires_grad);
+    for (size_t i = 0; i < a->data.size(); ++i) {
+        res->data[i] = std::log(a->data[i]);
     }
     return res;
 }

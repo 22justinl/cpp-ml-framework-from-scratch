@@ -4,6 +4,7 @@
 #include <iterator>
 #include <stdexcept>
 
+#include "kernels/math_ops.h"
 #include "ops/math_ops.h"
 #include "autograd/operator.h"
 #include "utils/tensor_utils.h"
@@ -19,6 +20,10 @@ Tensor::Tensor(const std::vector<float> init_data, const std::vector<size_t> sha
     if (shape.size() > 2) {
         throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
     }
+    size_t n_el = calculate_n_el(shape);
+    if (n_el != init_data.size()) {
+        throw std::runtime_error("Not enough data to initialize tensor");
+    }
     Tensor* grad = nullptr;
     if (requires_grad) {
         grad = new Tensor(0.f, shape);
@@ -31,13 +36,7 @@ Tensor::Tensor(const float fill_val, const std::vector<size_t> shape, bool requi
     if (shape.size() > 2) {
         throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
     }
-    size_t n_el = 0;
-    if (shape.size() > 0) {
-        n_el = shape[0];
-        for (size_t i = 1; i < shape.size(); ++i) {
-            n_el *= shape[i];
-        }
-    }
+    size_t n_el = calculate_n_el(shape);
     Tensor* grad = nullptr;
     if (requires_grad) {
         grad = new Tensor(0.f, shape);
@@ -179,10 +178,7 @@ void Tensor::zero_grad() {
     if (!impl_->requires_grad) {
         throw std::runtime_error("Called zero_grad on Tensor with requires_grad=false");
     }
-    std::vector<float>& grad_data = impl_->grad->impl_->data;
-    for (size_t i = 0; i < grad_data.size(); ++i) {
-        grad_data[i] = 0;
-    }
+    kernels::zero_inplace(impl_->grad->impl_);
 }
 
 void Tensor::backward() {
