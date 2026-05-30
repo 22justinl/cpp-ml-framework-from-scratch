@@ -14,7 +14,13 @@ TEST_CASE("Tensor sum") {
     CHECK(check_tensor_equal(res3, Tensor({6,15}, {2})));
 }
 TEST_CASE("Tensor mean") {
-
+    Tensor t1({1,2,3,4,5,6}, {2,3});
+    Tensor res1 = mean(t1);
+    Tensor res2 = mean(t1, 0);
+    Tensor res3 = mean(t1, 1);
+    CHECK(check_tensor_equal(res1, Tensor({21.0/6.0}, {1})));
+    CHECK(check_tensor_equal(res2, Tensor({5.0/2,7.0/2,9.0/2}, {3})));
+    CHECK(check_tensor_equal(res3, Tensor({6.0/3.0,15.0/3.0}, {2})));
 }
 TEST_CASE("Tensor max") {
 

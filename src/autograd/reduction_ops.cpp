@@ -21,19 +21,25 @@ void SumOp::backward() {
     }
 }
 
-// MeanOp::MeanOp(const Tensor& t1, size_t dim, const Tensor& t2) {
-//
-// }
-//
-// Tensor MeanOp::forward(const Tensor& t1, size_t dim) {
-//
-// }
-//
-// void MeanOp::backward() {
-//
-// }
-//
-//
+MeanOp::MeanOp(const Tensor& t1, size_t dim, const Tensor& t2): dim(dim) {
+    a = t1.impl();
+    out = t2.impl();
+}
+
+Tensor MeanOp::forward(const Tensor& t1, size_t dim) {
+    return Tensor(kernels::mean(t1.impl(), dim));
+}
+
+void MeanOp::backward() {
+    if (a->requires_grad) {
+        size_t n = dim == SIZE_T_MAX ? a->data.size() : a->shape[dim];
+        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(1.0/n, out->grad->impl()));
+        if (a->grad_fn) {
+            a->grad_fn->backward();
+        }
+    }
+}
+
 // MaxOp::MaxOp(const Tensor& t1, size_t dim, const Tensor& t2) {
 //
 // }

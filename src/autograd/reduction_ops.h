@@ -20,6 +20,7 @@ public:
 
     void backward() override;
 private:
+    size_t dim;
     std::shared_ptr<const TensorImpl> a;
     std::shared_ptr<const TensorImpl> out;
 };
