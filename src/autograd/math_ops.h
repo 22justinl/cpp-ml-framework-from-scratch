@@ -2,7 +2,6 @@
 
 #include "core/tensor.h"
 #include "autograd/operator.h"
-#include <memory>
 
 // Element-wise addition
 class AddOp: public Operator {

@@ -50,7 +50,9 @@ std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim,
         }
         // max over all values
         auto it = std::max_element(a->data.begin(), a->data.end());
-        (**indices_pptr)[0] = std::distance(a->data.begin(), it);
+        if (indices_pptr) {
+            (**indices_pptr)[0] = std::distance(a->data.begin(), it);
+        }
         float s = *it;
         std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(1, float(s)), {1}, {1}, a->requires_grad);
         return res;

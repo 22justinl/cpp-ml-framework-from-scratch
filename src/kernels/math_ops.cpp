@@ -217,14 +217,14 @@ std::shared_ptr<TensorImpl> power(std::shared_ptr<const TensorImpl> a, float x) 
 std::shared_ptr<TensorImpl> exp(std::shared_ptr<const TensorImpl> a) {
     std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->data), a->shape, a->strides, a->requires_grad);
     for (size_t i = 0; i < a->data.size(); ++i) {
-        res->data[i] = std::pow(std::numbers::e_v<float>, a->data[i]);
+        res->data[i] = std::pow(std::numbers::e_v<float>, res->data[i]);
     }
     return res;
 }
 std::shared_ptr<TensorImpl> log(std::shared_ptr<const TensorImpl> a) {
     std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->data), a->shape, a->strides, a->requires_grad);
     for (size_t i = 0; i < a->data.size(); ++i) {
-        res->data[i] = std::log(a->data[i]);
+        res->data[i] = std::log(res->data[i]);
     }
     return res;
 }

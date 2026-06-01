@@ -4,10 +4,7 @@
 #include <iostream>
 #include <vector>
 
-// NOTE: tolerance for float comparisons
-float eps = 1e-7;
-
-bool check_tensor_equal(const Tensor& t1, const Tensor& t2) {
+bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps) {
     if (!check_tensor_shape_match(t1, t2)) {
         return false;
     }
@@ -17,6 +14,7 @@ bool check_tensor_equal(const Tensor& t1, const Tensor& t2) {
     if (t1.shape().size() == 1) {
         for (size_t i = 0; i < t1.shape()[0]; ++i) {
             if (std::fabs(t1({i}) - t2({i})) >= eps) {
+                // std::cout << "index " << i << ": " << t1({i}) << " - " << t2({i}) << " = " << std::fabs(t1({i}) - t2({i}));
                 return false;
             }
         }

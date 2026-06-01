@@ -11,12 +11,15 @@ add_library(cpp_ml_from_scratch
 
     src/autograd/math_ops.cpp
     src/autograd/reduction_ops.cpp
+    src/autograd/activation.cpp
 
     src/kernels/math_ops.cpp
     src/kernels/reduction_ops.cpp
+    src/kernels/activation.cpp
 
     src/ops/math_ops.cpp
     src/ops/reduction_ops.cpp
+    src/ops/activation.cpp
 
     src/utils/tensor_utils.cpp
 )
@@ -33,6 +36,8 @@ add_executable(tests
     tests/test_math_ops_autograd.cpp
     tests/test_reduction_ops.cpp
     tests/test_reduction_ops_autograd.cpp
+    tests/test_activation.cpp
+    tests/test_activation_autograd.cpp
 )
 
 target_include_directories(tests PRIVATE

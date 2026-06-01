@@ -4,7 +4,6 @@
 #include "ops/math_ops.h"
 #include "utils/tensor_utils.h"
 
-#include <iostream>
 #include <numbers>
 
 TEST_CASE("Tensor add") {

@@ -3,7 +3,7 @@
 #include "core/tensor.h"
 #include <string>
 
-bool check_tensor_equal(const Tensor& t1, const Tensor& t2);
+bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps = 1e-7);
 bool check_tensor_shape_match(const Tensor& t1, const Tensor& t2);
 bool check_tensorimpl_shape_match(std::shared_ptr<const TensorImpl> t1, std::shared_ptr<const TensorImpl> t2);
 
