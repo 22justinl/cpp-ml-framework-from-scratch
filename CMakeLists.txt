@@ -32,6 +32,7 @@ add_executable(tests
     tests/test_math_ops.cpp
     tests/test_math_ops_autograd.cpp
     tests/test_reduction_ops.cpp
+    tests/test_reduction_ops_autograd.cpp
 )
 
 target_include_directories(tests PRIVATE
