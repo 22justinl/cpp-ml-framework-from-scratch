@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 struct TensorImpl;
 
@@ -73,6 +74,7 @@ public:
     void backward();
     void backward(const Tensor& out_grad);
 
+    void build_topo(std::shared_ptr<const TensorImpl> node, std::vector<std::shared_ptr<const TensorImpl>>& topo, std::unordered_set<std::shared_ptr<const TensorImpl>>& visited);
 private:
     std::shared_ptr<TensorImpl> impl_;
 };

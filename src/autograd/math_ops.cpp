@@ -13,16 +13,13 @@ Tensor AddOp::forward(const Tensor& t1, const Tensor& t2) {
 void AddOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), out->grad->impl());
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
     if (b->requires_grad) {
         kernels::add_inplace(b->grad->impl(), out->grad->impl());
-        if (b->grad_fn) {
-            b->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> AddOp::inputs() {
+    return {a, b};
 }
 
 SubOp::SubOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
@@ -36,9 +33,6 @@ Tensor SubOp::forward(const Tensor& t1, const Tensor& t2) {
 void SubOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), out->grad->impl());
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
     if (b->requires_grad) {
         if (b->data.size() == 1) {
@@ -47,10 +41,10 @@ void SubOp::backward() {
         } else {
             kernels::sub_inplace(b->grad->impl(), out->grad->impl());
         }
-        if (b->grad_fn) {
-            b->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> SubOp::inputs() {
+    return {a, b};
 }
 
 MulOp::MulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
@@ -64,16 +58,13 @@ Tensor MulOp::forward(const Tensor& t1, const Tensor& t2) {
 void MulOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::mul(b, out->grad->impl()));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
     if (b->requires_grad) {
         kernels::add_inplace(b->grad->impl(), kernels::mul(a, out->grad->impl()));
-        if (b->grad_fn) {
-            b->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> MulOp::inputs() {
+    return {a, b};
 }
 
 DivOp::DivOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
@@ -88,16 +79,13 @@ void DivOp::backward() {
     std::shared_ptr<TensorImpl> divb = kernels::div(out->grad->impl(), b);
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), divb);
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
     if (b->requires_grad) {
         kernels::sub_inplace(b->grad->impl(), kernels::mul(kernels::div(kernels::mul(divb, a), b), out->grad->impl()));
-        if (b->grad_fn) {
-            b->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> DivOp::inputs() {
+    return {a, b};
 }
 
 ScalarMulOp::ScalarMulOp(float f, const Tensor& t1, const Tensor& t2): f(f) {
@@ -110,10 +98,10 @@ Tensor ScalarMulOp::forward(float f, const Tensor& t1) {
 void ScalarMulOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(f, out->grad->impl()));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> ScalarMulOp::inputs() {
+    return {a};
 }
 
 MatMulOp::MatMulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
@@ -127,16 +115,13 @@ Tensor MatMulOp::forward(const Tensor& t1, const Tensor& t2) {
 void MatMulOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b)));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
     if (b->requires_grad) {
         kernels::add_inplace(b->grad->impl(), kernels::matmul(kernels::transpose(a), out->grad->impl()));
-        if (b->grad_fn) {
-            b->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> MatMulOp::inputs() {
+    return {a, b};
 }
 
 MatVecOp::MatVecOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
@@ -150,16 +135,13 @@ Tensor MatVecOp::forward(const Tensor& t1, const Tensor& t2) {
 void MatVecOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b)));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
     if (b->requires_grad) {
         kernels::add_inplace(b->grad->impl(), col_to_1d(kernels::matmul(kernels::transpose(a), out->grad->impl())));
-        if (b->grad_fn) {
-            b->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> MatVecOp::inputs() {
+    return {a, b};
 }
 
 DotOp::DotOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
@@ -173,16 +155,13 @@ Tensor DotOp::forward(const Tensor& t1, const Tensor& t2) {
 void DotOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->impl()->data[0], b));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
     if (b->requires_grad) {
         kernels::add_inplace(b->grad->impl(), kernels::scalar_mul(out->grad->impl()->data[0], a));
-        if (b->grad_fn) {
-            b->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> DotOp::inputs() {
+    return {a, b};
 }
 
 TransposeOp::TransposeOp(const Tensor& t1, const Tensor& t2) {
@@ -195,10 +174,10 @@ Tensor TransposeOp::forward(const Tensor& t1) {
 void TransposeOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::transpose(out->grad->impl()));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> TransposeOp::inputs() {
+    return {a};
 }
 
 PowerOp::PowerOp(const Tensor& t1, float x, const Tensor& t2): x(x) {
@@ -211,10 +190,10 @@ Tensor PowerOp::forward(const Tensor& t1, float x) {
 void PowerOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::mul(kernels::scalar_mul(x, kernels::power(a, x-1)), out->grad->impl()));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> PowerOp::inputs() {
+    return {a};
 }
 
 ExpOp::ExpOp(const Tensor& t1, const Tensor& t2) {
@@ -227,10 +206,10 @@ Tensor ExpOp::forward(const Tensor& t1) {
 void ExpOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::mul(out, out->grad->impl()));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> ExpOp::inputs() {
+    return {a};
 }
 
 LogOp::LogOp(const Tensor& t1, const Tensor& t2) {
@@ -243,8 +222,8 @@ Tensor LogOp::forward(const Tensor& t1) {
 void LogOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::div(out->grad->impl(), a));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> LogOp::inputs() {
+    return {a};
 }

@@ -3,6 +3,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <stdexcept>
+#include <unordered_set>
 
 #include "kernels/math_ops.h"
 #include "ops/math_ops.h"
@@ -193,7 +194,29 @@ void Tensor::backward(const Tensor& out_grad) {
     } else {
         *impl_->grad = out_grad;
     }
-    impl_->grad_fn->backward();
+    std::vector<std::shared_ptr<const TensorImpl>> topo;
+    std::unordered_set<std::shared_ptr<const TensorImpl>> visited;
+
+    build_topo(impl_, topo, visited);
+    for (size_t i = topo.size()-1; i != SIZE_T_MAX; --i) {
+        if (topo[i]->grad_fn) {
+            topo[i]->grad_fn->backward();
+        }
+    }
+}
+
+void Tensor::build_topo(std::shared_ptr<const TensorImpl> node, std::vector<std::shared_ptr<const TensorImpl>>& topo, std::unordered_set<std::shared_ptr<const TensorImpl>>& visited) {
+    if (visited.contains(node)) {
+        return;
+    }
+    visited.insert(node);
+    std::shared_ptr<Operator> op = node->grad_fn;
+    if (op) {
+        for (std::shared_ptr<const TensorImpl> ti : op->inputs()) {
+            build_topo(ti, topo, visited);
+        }
+    }
+    topo.push_back(node);
 }
 
 // Private functions

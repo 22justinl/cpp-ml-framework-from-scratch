@@ -8,6 +8,7 @@ public:
     static Tensor forward(const Tensor& t1, size_t dim);
 
     void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
 private:
     size_t dim;
     std::shared_ptr<const TensorImpl> a;
@@ -20,6 +21,7 @@ public:
     static Tensor forward(const Tensor& t1, size_t dim);
 
     void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
 private:
     size_t dim;
     std::shared_ptr<const TensorImpl> a;
@@ -32,6 +34,7 @@ public:
     static Tensor forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* indices_pptr = nullptr);
 
     void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
 private:
     size_t dim;
     std::shared_ptr<std::vector<size_t>> indices_ptr;
@@ -45,6 +48,7 @@ public:
     static Tensor forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* indices_pptr = nullptr);
 
     void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
 private:
     size_t dim;
     std::shared_ptr<std::vector<size_t>> indices_ptr;

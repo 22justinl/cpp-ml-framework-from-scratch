@@ -2,8 +2,6 @@
 
 #include "core/tensor.h"
 #include "ops/loss.h"
-#include "ops/reduction_ops.h"
-#include "ops/math_ops.h"
 #include "utils/tensor_utils.h"
 
 TEST_CASE("MSE Loss autograd") {
@@ -24,8 +22,6 @@ TEST_CASE("Cross Entropy Loss autograd") {
     t1.zero_grad();
     t2.zero_grad();
     res1.backward();
-    print_tensor(t1.grad());
-    print_tensor(t2.grad());
     CHECK(check_tensor_equal(t1.grad(), Tensor({-4.7086, -4.2079, -2.8468,  0.8530, 10.9102},{5}), 1e-4));
     CHECK(check_tensor_equal(t2.grad(), Tensor({4.4519, 3.4519, 2.4519, 1.4519, 0.4519},{5}), 1e-4));
 }

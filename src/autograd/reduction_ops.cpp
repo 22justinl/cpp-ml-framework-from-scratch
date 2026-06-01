@@ -27,10 +27,10 @@ void SumOp::backward() {
         } else {
             throw std::runtime_error("Sum operation gradient for nD not implemented");
         }
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> SumOp::inputs() {
+    return {a};
 }
 
 MeanOp::MeanOp(const Tensor& t1, size_t dim, const Tensor& t2): dim(dim) {
@@ -55,10 +55,10 @@ void MeanOp::backward() {
         } else {
             throw std::runtime_error("Mean operation gradient for nD not implemented");
         }
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> MeanOp::inputs() {
+    return {a};
 }
 
 MaxOp::MaxOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> indices_ptr, const Tensor& t2): dim(dim), indices_ptr(indices_ptr) {
@@ -93,10 +93,10 @@ void MaxOp::backward() {
         } else {
             throw std::runtime_error("Max operation gradient for nD not implemented");
         }
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> MaxOp::inputs() {
+    return {a};
 }
 
 MinOp::MinOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> indices_ptr, const Tensor& t2): dim(dim), indices_ptr(indices_ptr) {
@@ -131,8 +131,8 @@ void MinOp::backward() {
         } else {
             throw std::runtime_error("Min operation gradient for nD not implemented");
         }
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> MinOp::inputs() {
+    return {a};
 }

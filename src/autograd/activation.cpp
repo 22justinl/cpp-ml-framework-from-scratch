@@ -14,10 +14,10 @@ Tensor SigmoidOp::forward(const Tensor& t1) {
 void SigmoidOp::backward() {
     if (a->requires_grad) {
         kernels::add_inplace(a->grad->impl(), kernels::mul(out->grad->impl(), kernels::mul(out, kernels::sub(create_tensorimpl(std::vector<float>(out->data.size(), 1), out->shape, out->strides, false), out))));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> SigmoidOp::inputs() {
+    return {a};
 }
 
 ReLUOp::ReLUOp(const Tensor& t1, const Tensor& t2) {
@@ -36,10 +36,10 @@ void ReLUOp::backward() {
             }
         }
         kernels::add_inplace(a->grad->impl(), kernels::mul(create_tensorimpl(pos, a->shape, a->strides, false), out->grad->impl()));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> ReLUOp::inputs() {
+    return {a};
 }
 
 SoftmaxOp::SoftmaxOp(const Tensor& t1, const Tensor& t2) {
@@ -53,8 +53,8 @@ void SoftmaxOp::backward() {
     if (a->requires_grad) {
         float d = kernels::dot(out->grad->impl(), out)->data[0];
         kernels::add_inplace(a->grad->impl(), kernels::mul(out, kernels::sub(out->grad->impl(), create_tensorimpl(std::vector(out->data.size(), d), out->shape, out->strides, false))));
-        if (a->grad_fn) {
-            a->grad_fn->backward();
-        }
     }
+}
+std::vector<std::shared_ptr<const TensorImpl>> SoftmaxOp::inputs() {
+    return {a};
 }
