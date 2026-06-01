@@ -54,6 +54,18 @@ std::shared_ptr<TensorImpl> add(std::shared_ptr<const TensorImpl> a, std::shared
     return res;
 }
 std::shared_ptr<TensorImpl> sub(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+    if (b->data.size() == 1) {
+        // HACK: support subtracting scalar tensor, remove when broadcasting implemented
+        std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), 0.f), a->shape, a->strides, a->requires_grad || b->requires_grad);
+        const std::vector<float>& a_data = a->data;
+        float s = b->data[0];
+        std::vector<float>& res_data = res->data;
+
+        for (size_t i = 0; i < a_data.size(); ++i) {
+            res_data[i] = a_data[i] - s;
+        }
+        return res;
+    }
     if (!check_tensorimpl_shape_match(a, b)) {
         throw std::runtime_error("Tensor dimension mismatch: " + shape_to_string(a->shape)+ " and " + shape_to_string(b->shape));
     }

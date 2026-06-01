@@ -1,5 +1,6 @@
 #include "autograd/math_ops.h"
 #include "kernels/math_ops.h"
+#include "kernels/reduction_ops.h"
 
 AddOp::AddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     a = t1.impl();
@@ -40,7 +41,12 @@ void SubOp::backward() {
         }
     }
     if (b->requires_grad) {
-        kernels::sub_inplace(b->grad->impl(), out->grad->impl());
+        if (b->data.size() == 1) {
+            // HACK: support subtracting scalar tensor, remove when broadcasting implemented
+            kernels::sub_inplace(b->grad->impl(), kernels::sum(out->grad->impl()));
+        } else {
+            kernels::sub_inplace(b->grad->impl(), out->grad->impl());
+        }
         if (b->grad_fn) {
             b->grad_fn->backward();
         }
@@ -87,7 +93,7 @@ void DivOp::backward() {
         }
     }
     if (b->requires_grad) {
-        kernels::sub_inplace(b->grad->impl(), kernels::div(kernels::mul(divb, a), b));
+        kernels::sub_inplace(b->grad->impl(), kernels::mul(kernels::div(kernels::mul(divb, a), b), out->grad->impl()));
         if (b->grad_fn) {
             b->grad_fn->backward();
         }
@@ -220,7 +226,7 @@ Tensor ExpOp::forward(const Tensor& t1) {
 }
 void ExpOp::backward() {
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), out);
+        kernels::add_inplace(a->grad->impl(), kernels::mul(out, out->grad->impl()));
         if (a->grad_fn) {
             a->grad_fn->backward();
         }
@@ -236,7 +242,7 @@ Tensor LogOp::forward(const Tensor& t1) {
 }
 void LogOp::backward() {
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), kernels::div(1, a));
+        kernels::add_inplace(a->grad->impl(), kernels::div(out->grad->impl(), a));
         if (a->grad_fn) {
             a->grad_fn->backward();
         }

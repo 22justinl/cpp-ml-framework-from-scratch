@@ -27,6 +27,6 @@ Tensor transpose(const Tensor& t1);
 
 Tensor power(const Tensor& t1, float f);
 Tensor exp(const Tensor& t1);
-Tensor log(const Tensor& t1);
+Tensor log_e(const Tensor& t1);
 
 // TODO: sin, cos, tan

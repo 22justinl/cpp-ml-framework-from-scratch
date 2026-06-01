@@ -197,7 +197,7 @@ TEST_CASE("Tensor exp autograd") {
 
 TEST_CASE("Tensor log autograd") {
     Tensor t1({1,2,3}, {3}, true);
-    Tensor t2 = log(t1);
+    Tensor t2 = log_e(t1);
     t1.zero_grad();
     t2.backward();
     CHECK(check_tensor_equal(t1.grad(), Tensor({1.0, 1.0/2, 1.0/3}, {3})));

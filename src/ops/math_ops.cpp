@@ -50,6 +50,6 @@ Tensor power(const Tensor& t1, float f) {
 Tensor exp(const Tensor& t1) {
     return monop_helper<ExpOp>(t1);
 }
-Tensor log(const Tensor& t1) {
+Tensor log_e(const Tensor& t1) {
     return monop_helper<LogOp>(t1);
 }

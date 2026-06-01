@@ -20,6 +20,7 @@ add_library(cpp_ml_from_scratch
     src/ops/math_ops.cpp
     src/ops/reduction_ops.cpp
     src/ops/activation.cpp
+    src/ops/loss.cpp
 
     src/utils/tensor_utils.cpp
 )
@@ -38,6 +39,8 @@ add_executable(tests
     tests/test_reduction_ops_autograd.cpp
     tests/test_activation.cpp
     tests/test_activation_autograd.cpp
+    tests/test_loss.cpp
+    tests/test_loss_autograd.cpp
 )
 
 target_include_directories(tests PRIVATE
