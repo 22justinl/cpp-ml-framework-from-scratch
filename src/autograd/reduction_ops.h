@@ -30,28 +30,28 @@ private:
 
 class MaxOp: public Operator {
 public:
-    MaxOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> indices_ptr, const Tensor& t2);
-    static Tensor forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* indices_pptr = nullptr);
+    MaxOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> offsets_ptr, const Tensor& t2);
+    static Tensor forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* offsets_pptr = nullptr);
 
     void backward() override;
     std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
 private:
     size_t dim;
-    std::shared_ptr<std::vector<size_t>> indices_ptr;
+    std::shared_ptr<std::vector<size_t>> offsets_ptr;
     std::shared_ptr<const TensorImpl> a;
     std::shared_ptr<const TensorImpl> out;
 };
 
 class MinOp: public Operator {
 public:
-    MinOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> indices_ptr, const Tensor& t2);
-    static Tensor forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* indices_pptr = nullptr);
+    MinOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> offsets_ptr, const Tensor& t2);
+    static Tensor forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* offsets_pptr = nullptr);
 
     void backward() override;
     std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
 private:
     size_t dim;
-    std::shared_ptr<std::vector<size_t>> indices_ptr;
+    std::shared_ptr<std::vector<size_t>> offsets_ptr;
     std::shared_ptr<const TensorImpl> a;
     std::shared_ptr<const TensorImpl> out;
 };

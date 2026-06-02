@@ -61,13 +61,13 @@ std::vector<std::shared_ptr<const TensorImpl>> MeanOp::inputs() {
     return {a};
 }
 
-MaxOp::MaxOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> indices_ptr, const Tensor& t2): dim(dim), indices_ptr(indices_ptr) {
+MaxOp::MaxOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> offsets_ptr, const Tensor& t2): dim(dim), offsets_ptr(offsets_ptr) {
     a = t1.impl();
     out = t2.impl();
 }
 
-Tensor MaxOp::forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* indices_pptr) {
-    return Tensor(kernels::max(t1.impl(), dim, indices_pptr));
+Tensor MaxOp::forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
+    return Tensor(kernels::max(t1.impl(), dim, offsets_pptr));
 }
 
 void MaxOp::backward() {
@@ -76,19 +76,14 @@ void MaxOp::backward() {
             return;
         }
         if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
-            std::vector<float> temp_data(a->data.size(), 0);
-            temp_data[(*indices_ptr)[0]] = 1;
-            std::shared_ptr<TensorImpl> temp = create_tensorimpl(temp_data, a->shape, a->strides, false);
+            std::shared_ptr<TensorImpl> temp = create_tensorimpl(std::vector<float>(a->data.size(), 0), a->shape, a->strides, false);
+            temp->data[(*offsets_ptr)[0]] = 1;
             kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], temp));
         } else if (a->shape.size() == 2) {
-            std::vector<float> temp_data(a->shape[1-dim], 0);
-            std::vector<size_t> curr_idx = {0, 0};
+            std::shared_ptr<TensorImpl> temp = create_tensorimpl(std::vector<float>(a->shape[1-dim], 0), a->shape, a->strides, false);
             for (size_t i = 0; i < a->shape[1-dim]; ++i) {
-                curr_idx[1-dim] = i;
-                curr_idx[dim] = (*indices_ptr)[i];
-                temp_data[calculate_offset(a, curr_idx)] = 1;
+                temp->data[(*offsets_ptr)[i]] = 1;
             }
-            std::shared_ptr<TensorImpl> temp = create_tensorimpl(temp_data, a->shape, a->strides, false);
             kernels::add_inplace(a->grad->impl(), kernels::mul(temp, out->grad->impl()));
         } else {
             throw std::runtime_error("Max operation gradient for nD not implemented");
@@ -99,13 +94,13 @@ std::vector<std::shared_ptr<const TensorImpl>> MaxOp::inputs() {
     return {a};
 }
 
-MinOp::MinOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> indices_ptr, const Tensor& t2): dim(dim), indices_ptr(indices_ptr) {
+MinOp::MinOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> offsets_ptr, const Tensor& t2): dim(dim), offsets_ptr(offsets_ptr) {
     a = t1.impl();
     out = t2.impl();
 }
 
-Tensor MinOp::forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* indices_pptr) {
-    return Tensor(kernels::min(t1.impl(), dim, indices_pptr));
+Tensor MinOp::forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
+    return Tensor(kernels::min(t1.impl(), dim, offsets_pptr));
 }
 
 void MinOp::backward() {
@@ -115,7 +110,7 @@ void MinOp::backward() {
         }
         if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
             std::vector<float> temp_data(a->data.size(), 0);
-            temp_data[(*indices_ptr)[0]] = 1;
+            temp_data[(*offsets_ptr)[0]] = 1;
             std::shared_ptr<TensorImpl> temp = create_tensorimpl(temp_data, a->shape, a->strides, false);
             kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], temp));
         } else if (a->shape.size() == 2) {
@@ -123,7 +118,7 @@ void MinOp::backward() {
             std::vector<size_t> curr_idx = {0, 0};
             for (size_t i = 0; i < a->shape[1-dim]; ++i) {
                 curr_idx[1-dim] = i;
-                curr_idx[dim] = (*indices_ptr)[i];
+                curr_idx[dim] = (*offsets_ptr)[i];
                 temp_data[calculate_offset(a, curr_idx)] = 1;
             }
             std::shared_ptr<TensorImpl> temp = create_tensorimpl(temp_data, a->shape, a->strides, false);
