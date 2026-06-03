@@ -5,7 +5,7 @@
 #include <vector>
 
 bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps) {
-    if (!check_tensor_shape_match(t1, t2)) {
+    if (!check_shape_match(t1.shape(), t2.shape())) {
         return false;
     }
     if (t1.shape().size() == 0) {
@@ -14,7 +14,6 @@ bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps) {
     if (t1.shape().size() == 1) {
         for (size_t i = 0; i < t1.shape()[0]; ++i) {
             if (std::fabs(t1({i}) - t2({i})) >= eps) {
-                // std::cout << "index " << i << ": " << t1({i}) << " - " << t2({i}) << " = " << std::fabs(t1({i}) - t2({i}));
                 return false;
             }
         }
@@ -29,12 +28,6 @@ bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps) {
     }
 
     return true;
-}
-bool check_tensor_shape_match(const Tensor& t1, const Tensor& t2) {
-    return check_shape_match(t1.shape(), t2.shape());
-}
-bool check_tensorimpl_shape_match(std::shared_ptr<const TensorImpl> t1, std::shared_ptr<const TensorImpl> t2) {
-    return check_shape_match(t1->shape, t2->shape);
 }
 bool check_shape_match(const std::vector<size_t> shape1, const std::vector<size_t> shape2) {
     if (shape1.size() != shape2.size()) {

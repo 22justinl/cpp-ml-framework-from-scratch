@@ -88,8 +88,6 @@ TEST_CASE("Tensor matmul") {
     Tensor res2 = matmul(t3,t1);
     Tensor expected1({70,76,82,88,94,190,212,234,256,278,310,348,386,424,462}, {3,5});
     Tensor expected2({12,15,18,21}, {1,4});
-    CHECK(check_tensor_shape_match(res1, expected1));
-    CHECK(check_tensor_shape_match(res2, expected2));
     CHECK(check_tensor_equal(res1, expected1));
     CHECK(check_tensor_equal(res2, expected2));
 }

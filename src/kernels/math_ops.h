@@ -50,6 +50,8 @@ void elementwise_binary_op_inplace_broadcast(std::shared_ptr<TensorImpl> a, std:
 }
 void add_inplace(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b);
 void sub_inplace(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b);
+void add_inplace_broadcast(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info);
+void sub_inplace_broadcast(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info);
 void zero_inplace(std::shared_ptr<TensorImpl> a);
 std::shared_ptr<TensorImpl> add(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b);
 std::shared_ptr<TensorImpl> sub(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b);
@@ -72,4 +74,5 @@ std::shared_ptr<TensorImpl> log(std::shared_ptr<const TensorImpl> a); // natural
 
 }
 // helpers
-std::shared_ptr<TensorImpl> col_to_1d(std::shared_ptr<TensorImpl> a);
+std::shared_ptr<TensorImpl> col_to_vec(std::shared_ptr<TensorImpl> a);
+std::shared_ptr<TensorImpl> vec_to_col(std::shared_ptr<TensorImpl> a);

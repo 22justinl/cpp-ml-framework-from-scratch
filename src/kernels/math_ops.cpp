@@ -4,30 +4,17 @@
 
 namespace kernels {
 
-// operate on a in place
 void add_inplace(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
-    if (!check_tensorimpl_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + shape_to_string(a->shape)+ " and " + shape_to_string(b->shape));
-    }
-    std::vector<float>& a_data = a->data;
-    const std::vector<float>& b_data = b->data;
-
-    for (size_t i = 0; i < a_data.size(); ++i) {
-        a_data[i] += b_data[i];
-    }
+    elementwise_binary_op_inplace(a, b, [](float a, float b) { return a + b; });
 }
-
-// operate on a in place
 void sub_inplace(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
-    if (!check_tensorimpl_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + shape_to_string(a->shape)+ " and " + shape_to_string(b->shape));
-    }
-    std::vector<float>& a_data = a->data;
-    const std::vector<float>& b_data = b->data;
-
-    for (size_t i = 0; i < a_data.size(); ++i) {
-        a_data[i] -= b_data[i];
-    }
+    elementwise_binary_op_inplace(a, b, [](float a, float b) { return a - b; });
+}
+void add_inplace_broadcast(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+    elementwise_binary_op_inplace_broadcast(a, b, [](float a, float b) { return a + b; }, b_info);
+}
+void sub_inplace_broadcast(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+    elementwise_binary_op_inplace_broadcast(a, b, [](float a, float b) { return a - b; }, b_info);
 }
 
 void zero_inplace(std::shared_ptr<TensorImpl> a) {
@@ -195,11 +182,23 @@ std::shared_ptr<TensorImpl> log(std::shared_ptr<const TensorImpl> a) {
 }
 
 // TODO: replace later with reshaping?
-std::shared_ptr<TensorImpl> col_to_1d(std::shared_ptr<TensorImpl> a) {
+std::shared_ptr<TensorImpl> col_to_vec(std::shared_ptr<TensorImpl> a) {
     if (a->shape.size() != 2 || a->shape[1] != 1) {
         throw std::runtime_error("Only 2D column Tensors can be converted to 1D Tensor");
     }
     a->shape = {a->shape[0]};
+    a->strides = calculate_strides(a->shape);
+    if (a->grad) {
+        a->grad->impl()->shape = a->shape;
+        a->grad->impl()->strides = a->strides;
+    }
+    return a;
+}
+std::shared_ptr<TensorImpl> vec_to_col(std::shared_ptr<TensorImpl> a) {
+    if (a->shape.size() != 1) {
+        throw std::runtime_error("Only 1D Tensors can be converted to column Tensor");
+    }
+    a->shape = {a->shape[0], 1};
     a->strides = calculate_strides(a->shape);
     if (a->grad) {
         a->grad->impl()->shape = a->shape;

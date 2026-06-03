@@ -158,7 +158,7 @@ void MatVecOp::backward() {
         kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b)));
     }
     if (b->requires_grad) {
-        kernels::add_inplace(b->grad->impl(), col_to_1d(kernels::matmul(kernels::transpose(a), out->grad->impl())));
+        kernels::add_inplace(b->grad->impl(), col_to_vec(kernels::matmul(kernels::transpose(a), out->grad->impl())));
     }
 }
 std::vector<std::shared_ptr<const TensorImpl>> MatVecOp::inputs() {
