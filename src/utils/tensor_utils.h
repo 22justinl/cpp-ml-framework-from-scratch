@@ -4,8 +4,12 @@
 #include <string>
 
 bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps = 1e-7);
+
+// TODO: Remove these functions (redundant)
 bool check_tensor_shape_match(const Tensor& t1, const Tensor& t2);
 bool check_tensorimpl_shape_match(std::shared_ptr<const TensorImpl> t1, std::shared_ptr<const TensorImpl> t2);
+
+bool check_shape_match(const std::vector<size_t> shape1, const std::vector<size_t> shape2);
 
 std::string shape_to_string(const std::vector<size_t>& shape);
 void print_tensor(const Tensor& t1);

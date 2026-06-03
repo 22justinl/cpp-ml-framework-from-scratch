@@ -4,7 +4,7 @@
 
 // TODO:nD versions of operations (currently only 0D, 1D, 2D)
 namespace kernels {
-std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim) {
+std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     // NOTE: sum using double for better stability (implement more stable algorithm later)
     if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
         // sum over all values
@@ -23,7 +23,13 @@ std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim)
     }
     // 2D tensors
     size_t other_dim = 1-dim;
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->shape[other_dim], 0.f), {a->shape[other_dim]}, {1}, a->requires_grad);
+    std::vector<size_t> new_shape(a->shape);
+    if (keepdim) {
+        new_shape[dim] = 1;
+    } else {
+        new_shape.erase(new_shape.begin()+dim);
+    }
+    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->shape[other_dim], 0.f), new_shape, calculate_strides(new_shape), a->requires_grad);
     std::vector<size_t> curr_index{0, 0};
     // iterate over other dimension
     for (size_t i = 0; i < a->shape[other_dim]; ++i) {
@@ -38,7 +44,7 @@ std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim)
     }
     return res;
 }
-std::shared_ptr<TensorImpl> mean(std::shared_ptr<const TensorImpl> a, size_t dim) {
+std::shared_ptr<TensorImpl> mean(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     // TODO: improve stability
     size_t n = dim == SIZE_T_MAX ? a->data.size() : a->shape[dim];
     std::shared_ptr<TensorImpl> res = sum(a, dim);
@@ -47,7 +53,7 @@ std::shared_ptr<TensorImpl> mean(std::shared_ptr<const TensorImpl> a, size_t dim
     }
     return res;
 }
-std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
+std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
     if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
         // max over all values
         auto it = std::max_element(a->data.begin(), a->data.end());
@@ -67,7 +73,13 @@ std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim,
     }
     // 2D tensors
     size_t other_dim = 1-dim;
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->shape[other_dim], 0.f), {a->shape[other_dim]}, {1}, a->requires_grad);
+    std::vector<size_t> new_shape(a->shape);
+    if (keepdim) {
+        new_shape[dim] = 1;
+    } else {
+        new_shape.erase(new_shape.begin()+dim);
+    }
+    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->shape[other_dim], 0.f), new_shape, calculate_strides(new_shape), a->requires_grad);
     std::vector<size_t> curr_index{0, 0};
     if (offsets_pptr) {
         // Store indices for gradient calculation
@@ -97,7 +109,7 @@ std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim,
     }
     return res;
 }
-std::shared_ptr<TensorImpl> min(std::shared_ptr<const TensorImpl> a, size_t dim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
+std::shared_ptr<TensorImpl> min(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
     if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
         // min over all values
         auto it = std::min_element(a->data.begin(), a->data.end());
@@ -117,7 +129,13 @@ std::shared_ptr<TensorImpl> min(std::shared_ptr<const TensorImpl> a, size_t dim,
     }
     // 2D tensors
     size_t other_dim = 1-dim;
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->shape[other_dim], 0.f), {a->shape[other_dim]}, {1}, a->requires_grad);
+    std::vector<size_t> new_shape(a->shape);
+    if (keepdim) {
+        new_shape[dim] = 1;
+    } else {
+        new_shape.erase(new_shape.begin()+dim);
+    }
+    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->shape[other_dim], 0.f), new_shape, calculate_strides(new_shape), a->requires_grad);
     std::vector<size_t> curr_index{0, 0};
     if (offsets_pptr) {
         // Store indices for gradient calculation

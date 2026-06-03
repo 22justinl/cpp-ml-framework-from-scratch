@@ -1,7 +1,5 @@
 #include "kernels/math_ops.h"
 
-#include "utils/tensor_utils.h"
-
 #include <numbers>
 
 namespace kernels {
@@ -40,75 +38,28 @@ void zero_inplace(std::shared_ptr<TensorImpl> a) {
 }
 
 std::shared_ptr<TensorImpl> add(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
-    if (!check_tensorimpl_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + shape_to_string(a->shape)+ " and " + shape_to_string(b->shape));
-    }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), 0.f), a->shape, a->strides, a->requires_grad || b->requires_grad);
-    const std::vector<float>& a_data = a->data;
-    const std::vector<float>& b_data = b->data;
-    std::vector<float>& res_data = res->data;
-
-    for (size_t i = 0; i < a_data.size(); ++i) {
-        res_data[i] = a_data[i] + b_data[i];
-    }
-    return res;
+    return elementwise_binary_op(a, b, [](float a, float b){ return a + b; });
 }
 std::shared_ptr<TensorImpl> sub(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
-    if (b->data.size() == 1) {
-        // HACK: support subtracting scalar tensor, remove when broadcasting implemented
-        std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), 0.f), a->shape, a->strides, a->requires_grad || b->requires_grad);
-        const std::vector<float>& a_data = a->data;
-        float s = b->data[0];
-        std::vector<float>& res_data = res->data;
-
-        for (size_t i = 0; i < a_data.size(); ++i) {
-            res_data[i] = a_data[i] - s;
-        }
-        return res;
-    }
-    if (!check_tensorimpl_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + shape_to_string(a->shape)+ " and " + shape_to_string(b->shape));
-    }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), 0.f), a->shape, a->strides, a->requires_grad || b->requires_grad);
-    const std::vector<float>& a_data = a->data;
-    const std::vector<float>& b_data = b->data;
-    std::vector<float>& res_data = res->data;
-
-    for (size_t i = 0; i < a_data.size(); ++i) {
-        res_data[i] = a_data[i] - b_data[i];
-    }
-    return res;
+    return elementwise_binary_op(a, b, [](float a, float b){ return a - b; });
 }
 std::shared_ptr<TensorImpl> mul(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
-    if (!check_tensorimpl_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + shape_to_string(a->shape)+ " and " + shape_to_string(b->shape));
-    }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), 0.f), a->shape, a->strides, a->requires_grad || b->requires_grad);
-    const std::vector<float>& a_data = a->data;
-    const std::vector<float>& b_data = b->data;
-    std::vector<float>& res_data = res->data;
-
-    for (size_t i = 0; i < a_data.size(); ++i) {
-        res_data[i] = a_data[i] * b_data[i];
-    }
-    return res;
+    return elementwise_binary_op(a, b, [](float a, float b){ return a * b; });
 }
 std::shared_ptr<TensorImpl> div(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
-    if (!check_tensorimpl_shape_match(a, b)) {
-        throw std::runtime_error("Tensor dimension mismatch: " + shape_to_string(a->shape)+ " and " + shape_to_string(b->shape));
-    }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), 0.f), a->shape, a->strides, a->requires_grad || b->requires_grad);
-    const std::vector<float>& a_data = a->data;
-    const std::vector<float>& b_data = b->data;
-    std::vector<float>& res_data = res->data;
-
-    for (size_t i = 0; i < a_data.size(); ++i) {
-        if (!b_data[i]) {
-            throw std::runtime_error("Divide by zero error");
-        }
-        res_data[i] = a_data[i] / b_data[i];
-    }
-    return res;
+    return elementwise_binary_op(a, b, [](float a, float b){ if (b == 0) { throw std::runtime_error("Divide by 0"); } return a / b; });
+}
+std::shared_ptr<TensorImpl> add_broadcast(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+    return elementwise_binary_op_broadcast(a, b, [](float a, float b){ return a + b; }, b_info);
+}
+std::shared_ptr<TensorImpl> sub_broadcast(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+    return elementwise_binary_op_broadcast(a, b, [](float a, float b){ return a - b; }, b_info);
+}
+std::shared_ptr<TensorImpl> mul_broadcast(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+    return elementwise_binary_op_broadcast(a, b, [](float a, float b){ return a * b; }, b_info);
+}
+std::shared_ptr<TensorImpl> div_broadcast(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+    return elementwise_binary_op_broadcast(a, b, [](float a, float b){ if (b == 0) { throw std::runtime_error("Divide by 0"); } return a / b; }, b_info);
 }
 std::shared_ptr<TensorImpl> div(float f, std::shared_ptr<const TensorImpl> a) {
     std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), f), a->shape, a->strides, a->requires_grad);

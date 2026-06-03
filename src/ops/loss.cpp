@@ -15,14 +15,10 @@ Tensor mse_loss(const Tensor& pred, const Tensor& target) {
 }
 
 Tensor cross_entropy_loss(const Tensor& input, const Tensor& target) {
-    // Tensor m = max(input);
-    // Tensor shifted = input-m;
-    // Tensor last_term = log_e(sum(exp(shifted)));
-    // Tensor s = sum(target * (shifted-last_term));
-    // Tensor t3 = -s;
-
-    Tensor last_term = log_e(sum(exp(input)));
-    Tensor s = sum(target * (input-last_term));
+    Tensor m = max(input);
+    Tensor shifted = input-m;
+    Tensor last_term = log_e(sum(exp(shifted)));
+    Tensor s = sum(target * (shifted-last_term));
     Tensor t3 = -s;
     if (input.requires_grad() || target.requires_grad()) {
         std::shared_ptr<ScalarMulOp> op = std::make_shared<ScalarMulOp>(-1.0, s, t3);

@@ -14,11 +14,13 @@ TEST_CASE("Tensor sum autograd") {
     // Tensor res2 = sum(t1, 0);
     // t1.zero_grad();
     // res2.backward();
+    // print_tensor(t1.grad());
     // CHECK(check_tensor_equal(t1.grad(), Tensor({1,1,1,1,1,1}, {2,3})));
     //
     // Tensor res3 = sum(t1, 1);
     // t1.zero_grad();
     // res3.backward();
+    // print_tensor(t1.grad());
     // CHECK(check_tensor_equal(t1.grad(), Tensor({1,1,1,1,1,1}, {2,3})));
 }
 TEST_CASE("Tensor mean autograd") {

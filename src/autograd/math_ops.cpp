@@ -1,6 +1,8 @@
 #include "autograd/math_ops.h"
 #include "kernels/math_ops.h"
 #include "kernels/reduction_ops.h"
+#include "core/broadcast.h"
+#include "utils/tensor_utils.h"
 
 AddOp::AddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     a = t1.impl();
@@ -8,14 +10,18 @@ AddOp::AddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     out = t3.impl();
 }
 Tensor AddOp::forward(const Tensor& t1, const Tensor& t2) {
-    return Tensor(kernels::add(t1.impl(), t2.impl()));
+    if (check_shape_match(t1.shape(), t2.shape())) {
+        return Tensor(kernels::add(t1.impl(), t2.impl()));
+    }
+    BroadcastInfo b_info = construct_broadcast_info(t1.impl(), t2.impl());
+    return Tensor(kernels::add_broadcast(t1.impl(), t2.impl(), b_info));
 }
 void AddOp::backward() {
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), out->grad->impl());
+        kernels::add_inplace(a->grad->impl(), reduce_to_shape(out->grad->impl(), a->shape));
     }
     if (b->requires_grad) {
-        kernels::add_inplace(b->grad->impl(), out->grad->impl());
+        kernels::add_inplace(b->grad->impl(), reduce_to_shape(out->grad->impl(), b->shape));
     }
 }
 std::vector<std::shared_ptr<const TensorImpl>> AddOp::inputs() {
@@ -28,19 +34,18 @@ SubOp::SubOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     out = t3.impl();
 }
 Tensor SubOp::forward(const Tensor& t1, const Tensor& t2) {
-    return Tensor(kernels::sub(t1.impl(), t2.impl()));
+    if (check_shape_match(t1.shape(), t2.shape())) {
+        return Tensor(kernels::sub(t1.impl(), t2.impl()));
+    }
+    BroadcastInfo b_info = construct_broadcast_info(t1.impl(), t2.impl());
+    return Tensor(kernels::sub_broadcast(t1.impl(), t2.impl(), b_info));
 }
 void SubOp::backward() {
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), out->grad->impl());
+        kernels::add_inplace(a->grad->impl(), reduce_to_shape(out->grad->impl(), a->shape));
     }
     if (b->requires_grad) {
-        if (b->data.size() == 1) {
-            // HACK: support subtracting scalar tensor, remove when broadcasting implemented
-            kernels::sub_inplace(b->grad->impl(), kernels::sum(out->grad->impl()));
-        } else {
-            kernels::sub_inplace(b->grad->impl(), out->grad->impl());
-        }
+        kernels::sub_inplace(b->grad->impl(), reduce_to_shape(out->grad->impl(), b->shape));
     }
 }
 std::vector<std::shared_ptr<const TensorImpl>> SubOp::inputs() {
@@ -53,14 +58,20 @@ MulOp::MulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     out = t3.impl();
 }
 Tensor MulOp::forward(const Tensor& t1, const Tensor& t2) {
-    return Tensor(kernels::mul(t1.impl(), t2.impl()));
+    if (check_shape_match(t1.shape(), t2.shape())) {
+        return Tensor(kernels::mul(t1.impl(), t2.impl()));
+    }
+    BroadcastInfo b_info = construct_broadcast_info(t1.impl(), t2.impl());
+    return Tensor(kernels::mul_broadcast(t1.impl(), t2.impl(), b_info));
 }
 void MulOp::backward() {
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), kernels::mul(b, out->grad->impl()));
+        BroadcastInfo b_info = construct_broadcast_info(b, out->grad->impl());
+        kernels::add_inplace(a->grad->impl(), reduce_to_shape(kernels::mul_broadcast(b, out->grad->impl(), b_info), a->shape));
     }
     if (b->requires_grad) {
-        kernels::add_inplace(b->grad->impl(), kernels::mul(a, out->grad->impl()));
+        BroadcastInfo b_info = construct_broadcast_info(a, out->grad->impl());
+        kernels::add_inplace(b->grad->impl(), reduce_to_shape(kernels::mul_broadcast(a, out->grad->impl(), b_info), b->shape));
     }
 }
 std::vector<std::shared_ptr<const TensorImpl>> MulOp::inputs() {
@@ -73,15 +84,25 @@ DivOp::DivOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     out = t3.impl();
 }
 Tensor DivOp::forward(const Tensor& t1, const Tensor& t2) {
-    return Tensor(kernels::div(t1.impl(), t2.impl()));
+    if (check_shape_match(t1.shape(), t2.shape())) {
+        return Tensor(kernels::div(t1.impl(), t2.impl()));
+    }
+    BroadcastInfo b_info = construct_broadcast_info(t1.impl(), t2.impl());
+    return Tensor(kernels::div_broadcast(t1.impl(), t2.impl(), b_info));
 }
 void DivOp::backward() {
-    std::shared_ptr<TensorImpl> divb = kernels::div(out->grad->impl(), b);
+    BroadcastInfo b_info = construct_broadcast_info(out->grad->impl(), b);
+    std::shared_ptr<TensorImpl> divb = kernels::div_broadcast(out->grad->impl(), b, b_info);
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), divb);
+        kernels::add_inplace(a->grad->impl(), reduce_to_shape(divb, a->shape));
     }
     if (b->requires_grad) {
-        kernels::sub_inplace(b->grad->impl(), kernels::mul(kernels::div(kernels::mul(divb, a), b), out->grad->impl()));
+        std::shared_ptr<TensorImpl> temp = kernels::power(b, 2);
+        b_info = construct_broadcast_info(a, temp);
+        temp = kernels::div_broadcast(a, temp, b_info);
+        b_info = construct_broadcast_info(temp, out->grad->impl());
+        temp = kernels::mul_broadcast(temp, out->grad->impl(), b_info);
+        kernels::sub_inplace(b->grad->impl(), reduce_to_shape(temp, b->shape));
     }
 }
 std::vector<std::shared_ptr<const TensorImpl>> DivOp::inputs() {

@@ -31,21 +31,20 @@ bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps) {
     return true;
 }
 bool check_tensor_shape_match(const Tensor& t1, const Tensor& t2) {
-    return check_tensorimpl_shape_match(t1.impl(), t2.impl());
+    return check_shape_match(t1.shape(), t2.shape());
 }
 bool check_tensorimpl_shape_match(std::shared_ptr<const TensorImpl> t1, std::shared_ptr<const TensorImpl> t2) {
-    std::vector<size_t> t1_shape = t1->shape;
-    std::vector<size_t> t2_shape = t2->shape;
-    if (t1_shape.size() != t2_shape.size()) {
+    return check_shape_match(t1->shape, t2->shape);
+}
+bool check_shape_match(const std::vector<size_t> shape1, const std::vector<size_t> shape2) {
+    if (shape1.size() != shape2.size()) {
         return false;
     }
-
-    for (size_t i = 0; i < t1_shape.size(); ++i) {
-        if (t1_shape[i] != t2_shape[i]) {
+    for (size_t i = 0; i < shape1.size(); ++i) {
+        if (shape1[i] != shape2[i]) {
             return false;
         }
     }
-
     return true;
 }
 
@@ -74,7 +73,7 @@ void print_tensor(const Tensor& t1) {
         return;
     }
 
-    std::cout << "[";
+    std::cout << "[" << std::endl;
     for (size_t i = 0; i < t1.shape()[0]; ++i) {
         std::cout << "[";
         for (size_t j = 0; j < t1.shape()[1]; ++j) {
@@ -82,6 +81,7 @@ void print_tensor(const Tensor& t1) {
         }
         std::cout << "]" << std::endl;
     }
+    std::cout << "]" << std::endl;
 }
 
 std::vector<size_t> calculate_strides(const std::vector<size_t>& tensor_shape) {
@@ -102,7 +102,7 @@ size_t calculate_offset(std::shared_ptr<const TensorImpl> impl, const std::vecto
     }
     size_t offset = 0;
     for (size_t i = 0; i < impl->shape.size(); ++i) {
-        size_t idx = *(indices.begin()+i);
+        size_t idx = indices[i];
         if (idx >= impl->shape[i]) {
             throw std::runtime_error("Index out of range");
         }

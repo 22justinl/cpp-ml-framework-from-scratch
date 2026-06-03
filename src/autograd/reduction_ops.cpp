@@ -1,5 +1,6 @@
 #include "reduction_ops.h"
 
+#include "core/broadcast.h"
 #include "kernels/reduction_ops.h"
 #include "kernels/math_ops.h"
 #include "utils/tensor_utils.h"
@@ -23,6 +24,11 @@ void SumOp::backward() {
         if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
             kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], create_tensorimpl(std::vector<float>(a->data.size(), 1), a->shape, a->strides, false)));
         } else if (a->shape.size() == 2) {
+            // std::shared_ptr<TensorImpl> temp = create_tensorimpl(std::vector<float>(a->data.size(), 1), a->shape, a->strides, false);
+            // std::shared_ptr<TensorImpl> grad_T = dim == 1 ? kernels::transpose(out->grad->impl()) : out->grad->impl();
+            // BroadcastInfo b_info = construct_broadcast_info(temp, grad_T);
+            // temp = kernels::mul_broadcast(temp, grad_T, b_info);
+            // kernels::add_inplace(a->grad->impl(), temp);
             throw std::runtime_error("Sum along dimension operation gradient not implemented");
         } else {
             throw std::runtime_error("Sum operation gradient for nD not implemented");
@@ -67,7 +73,7 @@ MaxOp::MaxOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> 
 }
 
 Tensor MaxOp::forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
-    return Tensor(kernels::max(t1.impl(), dim, offsets_pptr));
+    return Tensor(kernels::max(t1.impl(), dim, false, offsets_pptr));
 }
 
 void MaxOp::backward() {
@@ -100,7 +106,7 @@ MinOp::MinOp(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>> 
 }
 
 Tensor MinOp::forward(const Tensor& t1, size_t dim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
-    return Tensor(kernels::min(t1.impl(), dim, offsets_pptr));
+    return Tensor(kernels::min(t1.impl(), dim, false, offsets_pptr));
 }
 
 void MinOp::backward() {
