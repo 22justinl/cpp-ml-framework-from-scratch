@@ -27,7 +27,7 @@ add_library(cpp_ml_from_scratch
     src/nn/parameter.cpp
     src/nn/linear.cpp
     src/nn/sequential.cpp
-    src/nn/relu.cpp
+    src/nn/activation.cpp
     src/nn/loss.cpp
 
     src/utils/tensor_utils.cpp
@@ -70,14 +70,9 @@ target_link_libraries(tests PRIVATE
     cpp_ml_from_scratch
 )
 
-add_executable(s_test
-    tests/test_main.cpp
-    tests/separate_test.cpp
+add_executable(xor
+    examples/xor.cpp
 )
-target_include_directories(s_test PRIVATE
-    external/doctest
-)
-
-target_link_libraries(s_test PRIVATE
+target_link_libraries(xor PRIVATE
     cpp_ml_from_scratch
 )
