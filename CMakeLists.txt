@@ -28,9 +28,13 @@ add_library(cpp_ml_from_scratch
     src/nn/linear.cpp
     src/nn/sequential.cpp
     src/nn/relu.cpp
+    src/nn/loss.cpp
 
     src/utils/tensor_utils.cpp
     src/utils/nn_utils.cpp
+
+    src/optim/optimizer.cpp
+    src/optim/sgd.cpp
 )
 
 target_include_directories(cpp_ml_from_scratch PUBLIC
@@ -63,5 +67,17 @@ target_include_directories(tests PRIVATE
 )
 
 target_link_libraries(tests PRIVATE
+    cpp_ml_from_scratch
+)
+
+add_executable(s_test
+    tests/test_main.cpp
+    tests/separate_test.cpp
+)
+target_include_directories(s_test PRIVATE
+    external/doctest
+)
+
+target_link_libraries(s_test PRIVATE
     cpp_ml_from_scratch
 )

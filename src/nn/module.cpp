@@ -1,18 +1,24 @@
 #include "module.h"
 
 namespace nn {
-std::vector<std::shared_ptr<Parameter>> Module::parameters() {
-    std::vector<std::shared_ptr<Parameter>> res = parameters_;
+Tensor Module::forward(Tensor x) {
+    throw std::runtime_error("Unsupported");
+};
+std::vector<Parameter*> Module::parameters() {
+    std::vector<Parameter*> res = parameters_;
     for (std::shared_ptr<Module> m : modules) {
-        for (auto it = m->parameters_.begin(); it < m->parameters_.end(); ++it) {
-            res.push_back(*it);
+        // for (auto it = m->parameters_.begin(); it < m->parameters_.end(); ++it) {
+        //     res.push_back(*it);
+        // }
+        for (Parameter* p : m->parameters()) {
+            res.push_back(p);
         }
     }
-    return parameters_;
+    return res;
 }
 
 void Module::zero_grad() {
-    for (std::shared_ptr<Parameter> p : parameters_) {
+    for (Parameter* p : parameters_) {
         p->tensor.zero_grad();
     }
 }
@@ -20,7 +26,7 @@ const std::string& Module::name() const {
     return name_;
 }
 
-void Module::register_parameter(std::shared_ptr<Parameter> parameter) {
+void Module::register_parameter(Parameter* parameter) {
     parameters_.push_back(parameter);
 }
 

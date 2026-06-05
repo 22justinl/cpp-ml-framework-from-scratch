@@ -1,7 +1,6 @@
 #include "tensor.h"
 
 #include <initializer_list>
-#include <iterator>
 #include <stdexcept>
 #include <unordered_set>
 
@@ -45,12 +44,7 @@ Tensor::Tensor(const float fill_val, const std::vector<size_t> shape, bool requi
     impl_ = std::make_shared<TensorImpl>(std::vector<float>(n_el, fill_val), shape, calculate_strides(shape), requires_grad, grad);
 }
 Tensor::Tensor(const Tensor& other) {
-    std::vector<float> new_data = other.impl_->data;
-    std::vector<size_t> new_shape = other.impl_->shape;
-    std::vector<size_t> new_strides = other.impl_->strides;
-    Tensor* new_grad = other.impl_->grad ? new Tensor(*other.impl_->grad) : nullptr;
-
-    impl_ = std::make_shared<TensorImpl>(new_data, new_shape, new_strides, other.impl_->requires_grad, new_grad);
+    impl_ = other.impl();
 }
 Tensor::Tensor(std::shared_ptr<TensorImpl> impl): impl_(impl) {}
 
