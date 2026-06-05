@@ -45,13 +45,9 @@ Tensor::Tensor(const float fill_val, const std::vector<size_t> shape, bool requi
     impl_ = std::make_shared<TensorImpl>(std::vector<float>(n_el, fill_val), shape, calculate_strides(shape), requires_grad, grad);
 }
 Tensor::Tensor(const Tensor& other) {
-    std::vector<float> new_data;
-    std::vector<size_t> new_shape;
-    std::vector<size_t> new_strides;
-    std::copy(other.impl_->data.begin(), other.impl_->data.end(), std::back_insert_iterator(new_data));
-    std::copy(other.impl_->shape.begin(), other.impl_->shape.end(), std::back_insert_iterator(new_data));
-    std::copy(other.impl_->strides.begin(), other.impl_->strides.end(), std::back_insert_iterator(new_data));
-
+    std::vector<float> new_data = other.impl_->data;
+    std::vector<size_t> new_shape = other.impl_->shape;
+    std::vector<size_t> new_strides = other.impl_->strides;
     Tensor* new_grad = other.impl_->grad ? new Tensor(*other.impl_->grad) : nullptr;
 
     impl_ = std::make_shared<TensorImpl>(new_data, new_shape, new_strides, other.impl_->requires_grad, new_grad);

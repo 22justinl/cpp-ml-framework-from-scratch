@@ -23,7 +23,14 @@ add_library(cpp_ml_from_scratch
     src/ops/activation.cpp
     src/ops/loss.cpp
 
+    src/nn/module.cpp
+    src/nn/parameter.cpp
+    src/nn/linear.cpp
+    src/nn/sequential.cpp
+    src/nn/relu.cpp
+
     src/utils/tensor_utils.cpp
+    src/utils/nn_utils.cpp
 )
 
 target_include_directories(cpp_ml_from_scratch PUBLIC
@@ -38,12 +45,17 @@ add_executable(tests
 
     tests/test_math_ops.cpp
     tests/test_math_ops_autograd.cpp
+
     tests/test_reduction_ops.cpp
     tests/test_reduction_ops_autograd.cpp
+
     tests/test_activation.cpp
     tests/test_activation_autograd.cpp
+
     tests/test_loss.cpp
     tests/test_loss_autograd.cpp
+
+    tests/test_nn.cpp
 )
 
 target_include_directories(tests PRIVATE

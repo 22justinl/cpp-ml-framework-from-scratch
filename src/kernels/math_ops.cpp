@@ -69,6 +69,7 @@ std::shared_ptr<TensorImpl> scalar_mul(float a, std::shared_ptr<const TensorImpl
     return res;
 }
 std::shared_ptr<TensorImpl> matmul(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+    // TODO: broadcasting with matmul (different rules from elementwise operations)
     // TODO: nD matmul
     std::vector<size_t> a_shape = a->shape;
     std::vector<size_t> b_shape = b->shape;
