@@ -23,7 +23,7 @@ int main() {
 
     nn::Sequential model({
             std::make_shared<nn::Linear>(2, 4),
-            std::make_shared<nn::ReLU>(),
+            std::make_shared<nn::Sigmoid>(),
             std::make_shared<nn::Linear>(4,1),
             std::make_shared<nn::Sigmoid>()
             });

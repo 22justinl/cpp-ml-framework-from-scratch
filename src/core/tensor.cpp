@@ -112,16 +112,16 @@ Tensor Tensor::operator-() const {
 float& Tensor::at(const std::initializer_list<size_t> indices) { return at(std::vector(indices)); }
 float& Tensor::at(const std::vector<size_t> indices) {
     size_t offset = calculate_offset(impl_, indices);
-    return impl_->data[offset];
+    return impl_->storage->data[offset];
 }
 float Tensor::at(const std::initializer_list<size_t> indices) const { return at(std::vector(indices)); }
 float Tensor::at(const std::vector<size_t> indices) const {
     size_t offset = calculate_offset(impl_, indices);
-    return impl_->data[offset];
+    return impl_->storage->data[offset];
 }
 
-const std::vector<float>& Tensor::data_raw() const { return impl_->data; }
-std::vector<float>& Tensor::data_raw() { return impl_->data; }
+const std::vector<float>& Tensor::data_raw() const { return impl_->storage->data; }
+std::vector<float>& Tensor::data_raw() { return impl_->storage->data; }
 
 const Tensor& Tensor::grad() const { 
     if (!impl_->requires_grad) {
@@ -158,7 +158,7 @@ void Tensor::set_impl(std::shared_ptr<TensorImpl> impl) {
 
 Tensor Tensor::detach() const {
     // NOTE: creates copy of data, change to avoid copying later?
-    return Tensor(impl_->data, impl_->shape);
+    return Tensor(impl_->storage->data, impl_->shape);
 }
 
 void Tensor::set_grad_fn(std::shared_ptr<Operator> grad_fn) {

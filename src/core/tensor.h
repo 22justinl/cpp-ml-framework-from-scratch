@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 struct TensorImpl;
+struct TensorData;
 
 class Operator;
 
@@ -87,17 +88,21 @@ struct TensorImpl {
             bool requires_grad,
             Tensor* grad
             ): 
-        data(data),
+        storage(std::make_shared<TensorData>(data)),
         shape(shape),
         strides(strides),
         requires_grad(requires_grad),
         grad(grad) {}
-    std::vector<float> data;
+    std::shared_ptr<TensorData> storage;
     std::vector<size_t> shape;
     std::vector<size_t> strides;
     bool requires_grad = false;
     std::unique_ptr<Tensor> grad;
     std::shared_ptr<Operator> grad_fn = nullptr;
+};
+
+struct TensorData {
+    std::vector<float> data;
 };
 
 Tensor operator*(float f, const Tensor& t);

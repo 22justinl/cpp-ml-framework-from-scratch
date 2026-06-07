@@ -9,8 +9,8 @@ std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim,
     if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
         // sum over all values
         double s = 0;
-        for (size_t i = 0; i < a->data.size(); ++i) {
-            s += a->data[i];
+        for (size_t i = 0; i < a->storage->data.size(); ++i) {
+            s += a->storage->data[i];
         }
         std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(1, float(s)), {1}, {1}, a->requires_grad);
         return res;
@@ -38,30 +38,30 @@ std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim,
         // sum over dim
         for (size_t j = 0; j < a->shape[dim]; ++j) {
             curr_index[dim] = j;
-            s += a->data[calculate_offset(a, curr_index)];
+            s += a->storage->data[calculate_offset(a, curr_index)];
         }
-        res->data[i] = float(s);
+        res->storage->data[i] = float(s);
     }
     return res;
 }
 std::shared_ptr<TensorImpl> mean(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     // TODO: improve stability
-    size_t n = dim == SIZE_T_MAX ? a->data.size() : a->shape[dim];
+    size_t n = dim == SIZE_T_MAX ? a->storage->data.size() : a->shape[dim];
     std::shared_ptr<TensorImpl> res = sum(a, dim);
-    for (size_t i = 0; i < res->data.size(); ++i) {
-        res->data[i] /= n;
+    for (size_t i = 0; i < res->storage->data.size(); ++i) {
+        res->storage->data[i] /= n;
     }
     return res;
 }
 std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
     if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
         // max over all values
-        auto it = std::max_element(a->data.begin(), a->data.end());
+        auto it = std::max_element(a->storage->data.begin(), a->storage->data.end());
         std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(1, *it), {1}, {1}, a->requires_grad);
         if (offsets_pptr) {
             // Store offsets for gradient calculation
             *offsets_pptr = std::make_unique<std::vector<size_t>>(1);
-            (**offsets_pptr)[0] = std::distance(a->data.begin(), it);
+            (**offsets_pptr)[0] = std::distance(a->storage->data.begin(), it);
         }
         return res;
     }
@@ -92,14 +92,14 @@ std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim,
         // setup max value and index
         size_t curr_offset = calculate_offset(a, curr_index);
         size_t v_offset = curr_offset;
-        float& v = res->data[i];
-        v = a->data[v_offset];
+        float& v = res->storage->data[i];
+        v = a->storage->data[v_offset];
         // find max
         for (size_t j = 0; j < a->shape[dim]; ++j) {
             curr_index[dim] = j;
             curr_offset = calculate_offset(a, curr_index);
-            if (a->data[curr_offset] > v) {
-                v = a->data[curr_offset];
+            if (a->storage->data[curr_offset] > v) {
+                v = a->storage->data[curr_offset];
                 v_offset = curr_offset;
             }
         }
@@ -112,12 +112,12 @@ std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim,
 std::shared_ptr<TensorImpl> min(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
     if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
         // min over all values
-        auto it = std::min_element(a->data.begin(), a->data.end());
+        auto it = std::min_element(a->storage->data.begin(), a->storage->data.end());
         std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(1, *it), {1}, {1}, a->requires_grad);
         if (offsets_pptr) {
             // Store offsets for gradient calculation
             *offsets_pptr = std::make_unique<std::vector<size_t>>(1);
-            (**offsets_pptr)[0] = std::distance(a->data.begin(), it);
+            (**offsets_pptr)[0] = std::distance(a->storage->data.begin(), it);
         }
         return res;
     }
@@ -148,14 +148,14 @@ std::shared_ptr<TensorImpl> min(std::shared_ptr<const TensorImpl> a, size_t dim,
         // setup min value and index
         size_t curr_offset = calculate_offset(a, curr_index);
         size_t v_offset = curr_offset;
-        float& v = res->data[i];
-        v = a->data[v_offset];
+        float& v = res->storage->data[i];
+        v = a->storage->data[v_offset];
         // find min
         for (size_t j = 0; j < a->shape[dim]; ++j) {
             curr_index[dim] = j;
             curr_offset = calculate_offset(a, curr_index);
-            if (a->data[curr_offset] < v) {
-                v = a->data[curr_offset];
+            if (a->storage->data[curr_offset] < v) {
+                v = a->storage->data[curr_offset];
                 v_offset = curr_offset;
             }
         }

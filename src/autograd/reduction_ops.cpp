@@ -17,9 +17,9 @@ void SumOp::backward() {
         return;
     }
     if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
-        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], create_tensorimpl(std::vector<float>(a->data.size(), 1), a->shape, a->strides, false)));
+        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], create_tensorimpl(std::vector<float>(a->storage->data.size(), 1), a->shape, a->strides, false)));
     } else if (a->shape.size() == 2) {
-        std::shared_ptr<TensorImpl> grad = create_tensorimpl(std::vector<float>(a->data.size(), 1), a->shape, a->strides, false);
+        std::shared_ptr<TensorImpl> grad = create_tensorimpl(std::vector<float>(a->storage->data.size(), 1), a->shape, a->strides, false);
         std::shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
         BroadcastInfo b_info = construct_broadcast_info(grad, out_grad);
         grad = kernels::mul_broadcast(grad, out_grad, b_info);
@@ -44,11 +44,11 @@ void MeanOp::backward() {
         return;
     }
     if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
-        size_t n = dim == SIZE_T_MAX ? a->data.size() : a->shape[dim];
-        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], create_tensorimpl(std::vector<float>(a->data.size(), 1.0/n), a->shape, a->strides, false)));
+        size_t n = dim == SIZE_T_MAX ? a->storage->data.size() : a->shape[dim];
+        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], create_tensorimpl(std::vector<float>(a->storage->data.size(), 1.0/n), a->shape, a->strides, false)));
     } else if (a->shape.size() == 2) {
         size_t n = a->shape[dim];
-        std::shared_ptr<TensorImpl> grad = create_tensorimpl(std::vector<float>(a->data.size(), 1.0/n), a->shape, a->strides, false);
+        std::shared_ptr<TensorImpl> grad = create_tensorimpl(std::vector<float>(a->storage->data.size(), 1.0/n), a->shape, a->strides, false);
         std::shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
         BroadcastInfo b_info = construct_broadcast_info(grad, out_grad);
         grad = kernels::mul_broadcast(grad, out_grad, b_info);
@@ -73,14 +73,14 @@ void MaxOp::backward() {
         return;
     }
     if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
-        std::shared_ptr<TensorImpl> temp = create_tensorimpl(std::vector<float>(a->data.size(), 0), a->shape, a->strides, false);
-        temp->data[(*offsets_ptr)[0]] = 1;
+        std::shared_ptr<TensorImpl> temp = create_tensorimpl(std::vector<float>(a->storage->data.size(), 0), a->shape, a->strides, false);
+        temp->storage->data[(*offsets_ptr)[0]] = 1;
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], temp));
     } else if (a->shape.size() == 2) {
-        std::shared_ptr<TensorImpl> temp = create_tensorimpl(std::vector<float>(a->data.size(), 0), a->shape, a->strides, false);
+        std::shared_ptr<TensorImpl> temp = create_tensorimpl(std::vector<float>(a->storage->data.size(), 0), a->shape, a->strides, false);
         std::shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
         for (size_t i = 0; i < a->shape[1-dim]; ++i) {
-            temp->data[(*offsets_ptr)[i]] = 1;
+            temp->storage->data[(*offsets_ptr)[i]] = 1;
         }
         BroadcastInfo b_info = construct_broadcast_info(temp, out_grad);
         temp = kernels::mul_broadcast(temp, out_grad, b_info);
@@ -105,15 +105,15 @@ void MinOp::backward() {
         return;
     }
     if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
-        std::vector<float> temp_data(a->data.size(), 0);
+        std::vector<float> temp_data(a->storage->data.size(), 0);
         temp_data[(*offsets_ptr)[0]] = 1;
         std::shared_ptr<TensorImpl> temp = create_tensorimpl(temp_data, a->shape, a->strides, false);
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], temp));
     } else if (a->shape.size() == 2) {
-        std::shared_ptr<TensorImpl> temp = create_tensorimpl(std::vector<float>(a->data.size(), 0), a->shape, a->strides, false);
+        std::shared_ptr<TensorImpl> temp = create_tensorimpl(std::vector<float>(a->storage->data.size(), 0), a->shape, a->strides, false);
         std::shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
         for (size_t i = 0; i < a->shape[1-dim]; ++i) {
-            temp->data[(*offsets_ptr)[i]] = 1;
+            temp->storage->data[(*offsets_ptr)[i]] = 1;
         }
         BroadcastInfo b_info = construct_broadcast_info(temp, out_grad);
         temp = kernels::mul_broadcast(temp, out_grad, b_info);

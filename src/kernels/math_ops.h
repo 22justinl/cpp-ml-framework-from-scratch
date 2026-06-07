@@ -9,9 +9,9 @@ std::shared_ptr<TensorImpl> elementwise_binary_op(std::shared_ptr<const TensorIm
     if (!check_shape_match(a->shape, b->shape)) {
         throw std::runtime_error("Tensor shape mismatch");
     }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), 0), a->shape, a->strides, a->requires_grad || b->requires_grad);
-    for (size_t i = 0; i < res->data.size(); ++i) {
-        res->data[i] = op(a->data[i], b->data[i]);
+    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->storage->data.size(), 0), a->shape, a->strides, a->requires_grad || b->requires_grad);
+    for (size_t i = 0; i < res->storage->data.size(); ++i) {
+        res->storage->data[i] = op(a->storage->data[i], b->storage->data[i]);
     }
     return res;
 }
@@ -23,9 +23,9 @@ std::shared_ptr<TensorImpl> elementwise_binary_op_broadcast(std::shared_ptr<cons
     const std::vector<size_t>& out_strides = b_info.out_strides;
     std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(calculate_n_el(out_shape), 0), out_shape, out_strides, a->requires_grad || b->requires_grad);
     std::vector<size_t> idx(out_shape.size(), 0);
-    for (size_t i = 0; i < res->data.size(); ++i) {
+    for (size_t i = 0; i < res->storage->data.size(); ++i) {
         map_offset_to_idx(i, out_strides, idx);
-        res->data[i] = op(a->data[map_idx_to_offset(idx, a_strides)], b->data[map_idx_to_offset(idx, b_strides)]);
+        res->storage->data[i] = op(a->storage->data[map_idx_to_offset(idx, a_strides)], b->storage->data[map_idx_to_offset(idx, b_strides)]);
     }
     return res;
 }
@@ -34,18 +34,18 @@ void elementwise_binary_op_inplace(std::shared_ptr<TensorImpl> a, std::shared_pt
     if (!check_shape_match(a->shape, b->shape)) {
         throw std::runtime_error("Tensor shape mismatch");
     }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->data.size(), 0), a->shape, a->strides, a->requires_grad || b->requires_grad);
-    for (size_t i = 0; i < res->data.size(); ++i) {
-        a->data[i] = op(a->data[i], b->data[i]);
+    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->storage->data.size(), 0), a->shape, a->strides, a->requires_grad || b->requires_grad);
+    for (size_t i = 0; i < res->storage->data.size(); ++i) {
+        a->storage->data[i] = op(a->storage->data[i], b->storage->data[i]);
     }
 }
 template <typename Op>
 void elementwise_binary_op_inplace_broadcast(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b, Op op, const BroadcastInfo& b_info) {
     const std::vector<size_t>& b_strides = b_info.b_strides;
     std::vector<size_t> idx(a->shape.size(), 0);
-    for (size_t i = 0; i < a->data.size(); ++i) {
+    for (size_t i = 0; i < a->storage->data.size(); ++i) {
         map_offset_to_idx(i, a->shape, idx);
-        a->data[i] = op(a->data[i], b->data[map_idx_to_offset(idx, b_strides)]);
+        a->storage->data[i] = op(a->storage->data[i], b->storage->data[map_idx_to_offset(idx, b_strides)]);
     }
 }
 void add_inplace(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b);

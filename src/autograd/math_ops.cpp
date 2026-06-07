@@ -174,10 +174,10 @@ Tensor DotOp::forward(const Tensor& t1, const Tensor& t2) {
 }
 void DotOp::backward() {
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->impl()->data[0], b));
+        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->impl()->storage->data[0], b));
     }
     if (b->requires_grad) {
-        kernels::add_inplace(b->grad->impl(), kernels::scalar_mul(out->grad->impl()->data[0], a));
+        kernels::add_inplace(b->grad->impl(), kernels::scalar_mul(out->grad->impl()->storage->data[0], a));
     }
 }
 std::vector<std::shared_ptr<const TensorImpl>> DotOp::inputs() {
