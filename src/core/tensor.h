@@ -81,27 +81,29 @@ private:
 };
 
 struct TensorImpl {
-    TensorImpl(
-            std::vector<float> data, 
-            std::vector<size_t> shape, 
-            std::vector<size_t> strides,
-            bool requires_grad,
-            Tensor* grad
-            ): 
-        storage(std::make_shared<TensorData>(data)),
-        shape(shape),
-        strides(strides),
-        requires_grad(requires_grad),
-        grad(grad) {}
+    // New tensor with new shape
+    TensorImpl(std::vector<float> data, std::vector<size_t> shape, bool requires_grad);
+    // New tensor from existing shape
+    TensorImpl(std::vector<float> data, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad);
+    // New tensor with new shape (filled)
+    TensorImpl(float val, std::vector<size_t> shape, bool requires_grad);
+    // New tensor from existing shape (filled)
+    TensorImpl(float val, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad);
+    // View
+    TensorImpl(std::shared_ptr<TensorData> storage, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad);
+
     std::shared_ptr<TensorData> storage;
     std::vector<size_t> shape;
     std::vector<size_t> strides;
+    size_t offset = 0;
+    size_t n_el = 0;
     bool requires_grad = false;
     std::unique_ptr<Tensor> grad;
     std::shared_ptr<Operator> grad_fn = nullptr;
 };
 
 struct TensorData {
+    TensorData(std::vector<float> data);
     std::vector<float> data;
 };
 

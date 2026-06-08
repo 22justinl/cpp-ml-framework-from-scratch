@@ -17,6 +17,7 @@ add_library(cpp_ml_from_scratch
     src/kernels/math_ops.cpp
     src/kernels/reduction_ops.cpp
     src/kernels/activation.cpp
+    src/kernels/tensor_ops.cpp
 
     src/ops/math_ops.cpp
     src/ops/reduction_ops.cpp

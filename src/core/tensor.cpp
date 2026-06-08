@@ -9,8 +9,42 @@
 #include "autograd/operator.h"
 #include "utils/tensor_utils.h"
 
+// New tensor with new shape
+TensorImpl::TensorImpl(std::vector<float> data, std::vector<size_t> shape, bool requires_grad): TensorImpl(data, shape, calculate_strides(shape), requires_grad) {}
+// New tensor from existing shape
+TensorImpl::TensorImpl(std::vector<float> data, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad): shape(shape), strides(strides), requires_grad(requires_grad) {
+    n_el = calculate_n_el(shape);
+    if (n_el != data.size()) {
+        throw std::runtime_error("Not enough data to initialize tensor");
+    }
+    storage = std::make_shared<TensorData>(data);
+    if (requires_grad) {
+        grad = std::make_unique<Tensor>(0.f, shape);
+    }
+}
+// New tensor with new shape (filled)
+TensorImpl::TensorImpl(float val, std::vector<size_t> shape, bool requires_grad): TensorImpl(val, shape, calculate_strides(shape), requires_grad) {}
+// New tensor from existing shape (filled)
+TensorImpl::TensorImpl(float val, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad): shape(shape), strides(strides), requires_grad(requires_grad) {
+    n_el = calculate_n_el(shape);
+    storage = std::make_shared<TensorData>(std::vector<float>(n_el, val));
+    if (requires_grad) {
+        grad = std::make_unique<Tensor>(0.f, shape);
+    }
+}
+
+// View
+TensorImpl::TensorImpl(std::shared_ptr<TensorData> storage, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad): storage(storage), shape(shape), strides(strides), requires_grad(requires_grad) {
+    n_el = calculate_n_el(shape);
+    if (requires_grad) {
+        grad = std::make_unique<Tensor>(0.f, shape);
+    }
+}
+
+TensorData::TensorData(std::vector<float> data): data(data) {}
+
 Tensor::Tensor() {
-    impl_ = std::make_shared<TensorImpl>(TensorImpl(std::vector<float>(0, 0), std::vector<size_t>(0, 0), std::vector<size_t>(0, 0), false, nullptr));
+    impl_ = std::make_shared<TensorImpl>(std::vector<float>(0, 0), std::vector<size_t>(0, 0), false);
 }
 
 Tensor::Tensor(const std::initializer_list<float> init_data, const std::initializer_list<size_t> shape, bool requires_grad): Tensor(std::vector(init_data), std::vector(shape), requires_grad) {}
@@ -20,15 +54,7 @@ Tensor::Tensor(const std::vector<float> init_data, const std::vector<size_t> sha
     if (shape.size() > 2) {
         throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
     }
-    size_t n_el = calculate_n_el(shape);
-    if (n_el != init_data.size()) {
-        throw std::runtime_error("Not enough data to initialize tensor");
-    }
-    Tensor* grad = nullptr;
-    if (requires_grad) {
-        grad = new Tensor(0.f, shape);
-    }
-    impl_ = std::make_shared<TensorImpl>(TensorImpl(init_data, shape, calculate_strides(shape), requires_grad, grad));
+    impl_ = std::make_shared<TensorImpl>(init_data, shape, requires_grad);
 }
 
 Tensor::Tensor(const float fill_val, const std::initializer_list<size_t> shape, bool requires_grad): Tensor(fill_val, std::vector(shape), requires_grad) {}
@@ -36,13 +62,9 @@ Tensor::Tensor(const float fill_val, const std::vector<size_t> shape, bool requi
     if (shape.size() > 2) {
         throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
     }
-    size_t n_el = calculate_n_el(shape);
-    Tensor* grad = nullptr;
-    if (requires_grad) {
-        grad = new Tensor(0.f, shape);
-    }
-    impl_ = std::make_shared<TensorImpl>(std::vector<float>(n_el, fill_val), shape, calculate_strides(shape), requires_grad, grad);
+    impl_ = std::make_shared<TensorImpl>(fill_val, shape, requires_grad);
 }
+
 Tensor::Tensor(const Tensor& other) {
     impl_ = other.impl();
 }

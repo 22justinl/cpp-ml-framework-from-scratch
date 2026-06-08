@@ -2,54 +2,57 @@
 
 #include <numbers>
 
+using std::shared_ptr;
+using std::make_shared;
+
 namespace kernels {
 
-void add_inplace(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+void add_inplace(shared_ptr<TensorImpl> a, shared_ptr<const TensorImpl> b) {
     elementwise_binary_op_inplace(a, b, [](float a, float b) { return a + b; });
 }
-void sub_inplace(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+void sub_inplace(shared_ptr<TensorImpl> a, shared_ptr<const TensorImpl> b) {
     elementwise_binary_op_inplace(a, b, [](float a, float b) { return a - b; });
 }
-void add_inplace_broadcast(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+void add_inplace_broadcast(shared_ptr<TensorImpl> a, shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
     elementwise_binary_op_inplace_broadcast(a, b, [](float a, float b) { return a + b; }, b_info);
 }
-void sub_inplace_broadcast(std::shared_ptr<TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+void sub_inplace_broadcast(shared_ptr<TensorImpl> a, shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
     elementwise_binary_op_inplace_broadcast(a, b, [](float a, float b) { return a - b; }, b_info);
 }
 
-void zero_inplace(std::shared_ptr<TensorImpl> a) {
+void zero_inplace(shared_ptr<TensorImpl> a) {
     std::vector<float>& a_data = a->storage->data;
     for (size_t i = 0; i < a_data.size(); ++i) {
         a_data[i] = 0;
     }
 }
 
-std::shared_ptr<TensorImpl> add(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+shared_ptr<TensorImpl> add(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     return elementwise_binary_op(a, b, [](float a, float b){ return a + b; });
 }
-std::shared_ptr<TensorImpl> sub(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+shared_ptr<TensorImpl> sub(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     return elementwise_binary_op(a, b, [](float a, float b){ return a - b; });
 }
-std::shared_ptr<TensorImpl> mul(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+shared_ptr<TensorImpl> mul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     return elementwise_binary_op(a, b, [](float a, float b){ return a * b; });
 }
-std::shared_ptr<TensorImpl> div(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+shared_ptr<TensorImpl> div(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     return elementwise_binary_op(a, b, [](float a, float b){ if (b == 0) { throw std::runtime_error("Divide by 0"); } return a / b; });
 }
-std::shared_ptr<TensorImpl> add_broadcast(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+shared_ptr<TensorImpl> add_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
     return elementwise_binary_op_broadcast(a, b, [](float a, float b){ return a + b; }, b_info);
 }
-std::shared_ptr<TensorImpl> sub_broadcast(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+shared_ptr<TensorImpl> sub_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
     return elementwise_binary_op_broadcast(a, b, [](float a, float b){ return a - b; }, b_info);
 }
-std::shared_ptr<TensorImpl> mul_broadcast(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+shared_ptr<TensorImpl> mul_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
     return elementwise_binary_op_broadcast(a, b, [](float a, float b){ return a * b; }, b_info);
 }
-std::shared_ptr<TensorImpl> div_broadcast(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
+shared_ptr<TensorImpl> div_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
     return elementwise_binary_op_broadcast(a, b, [](float a, float b){ if (b == 0) { throw std::runtime_error("Divide by 0"); } return a / b; }, b_info);
 }
-std::shared_ptr<TensorImpl> div(float f, std::shared_ptr<const TensorImpl> a) {
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->storage->data.size(), f), a->shape, a->strides, a->requires_grad);
+shared_ptr<TensorImpl> div(float f, shared_ptr<const TensorImpl> a) {
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(f, a->shape, a->strides, a->requires_grad);
     const std::vector<float>& a_data = a->storage->data;
     std::vector<float>& res_data = res->storage->data;
 
@@ -61,14 +64,14 @@ std::shared_ptr<TensorImpl> div(float f, std::shared_ptr<const TensorImpl> a) {
     }
     return res;
 }
-std::shared_ptr<TensorImpl> scalar_mul(float a, std::shared_ptr<const TensorImpl> b) {
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(b->storage->data.size(), 0.f), b->shape, b->strides, b->requires_grad);
+shared_ptr<TensorImpl> scalar_mul(float a, shared_ptr<const TensorImpl> b) {
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, b->shape, b->strides, b->requires_grad);
     for (size_t i = 0; i < b->storage->data.size(); ++i) {
         res->storage->data[i] = a * b->storage->data[i];
     }
     return res;
 }
-std::shared_ptr<TensorImpl> matmul(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     // TODO: broadcasting with matmul (different rules from elementwise operations)
     // TODO: nD matmul
     std::vector<size_t> a_shape = a->shape;
@@ -79,7 +82,7 @@ std::shared_ptr<TensorImpl> matmul(std::shared_ptr<const TensorImpl> a, std::sha
     if (b_shape.size() != 2 || b_shape.size() != 2) {
         throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
     }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a_shape[0]*b_shape[1], 0.f), {a_shape[0], b_shape[1]}, calculate_strides({a_shape[0], b_shape[1]}), a->requires_grad || b->requires_grad);
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({a_shape[0], b_shape[1]}), a->requires_grad || b->requires_grad);
     for (size_t i = 0; i < a_shape[0]; ++i) {
         for (size_t j = 0; j < b_shape[1]; ++j) {
             for (size_t k = 0; k < a_shape[1]; ++k) {
@@ -89,7 +92,7 @@ std::shared_ptr<TensorImpl> matmul(std::shared_ptr<const TensorImpl> a, std::sha
     }
     return res;
 }
-std::shared_ptr<TensorImpl> matvec(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+shared_ptr<TensorImpl> matvec(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     std::vector<size_t> t1_shape = a->shape;
     std::vector<size_t> t2_shape = b->shape;
     if (t1_shape.size() != 2 || (t2_shape.size() != 1)) {
@@ -98,7 +101,7 @@ std::shared_ptr<TensorImpl> matvec(std::shared_ptr<const TensorImpl> a, std::sha
     if (t1_shape[1] != b->storage->data.size()) {
         throw std::runtime_error("Cannot matrix multiply tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
     }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(t1_shape[0], 0.f), {t1_shape[0], 1}, {1, 1}, a->requires_grad || b->requires_grad);
+    shared_ptr res = make_shared<TensorImpl>(0, std::vector<size_t>({t1_shape[0], 1}), a->requires_grad || b->requires_grad);
     const std::vector<float>& t2_data = b->storage->data;
     std::vector<float>& res_data = res->storage->data;
     for (size_t i = 0; i < t1_shape[0]; ++i) {
@@ -108,10 +111,10 @@ std::shared_ptr<TensorImpl> matvec(std::shared_ptr<const TensorImpl> a, std::sha
     }
     return res;
 }
-std::shared_ptr<TensorImpl> dot(std::shared_ptr<const TensorImpl> a, std::shared_ptr<const TensorImpl> b) {
+shared_ptr<TensorImpl> dot(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     std::vector<size_t> t1_shape = a->shape;
     std::vector<size_t> t2_shape = b->shape;
-    std::shared_ptr<TensorImpl> res = create_tensorimpl({0.f}, {1}, {1}, a->requires_grad || b->requires_grad);
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({1}), a->requires_grad);
     if (t1_shape.size() == 0 && t2_shape.size() == 0) {
         return res;
     }
@@ -138,42 +141,23 @@ std::shared_ptr<TensorImpl> dot(std::shared_ptr<const TensorImpl> a, std::shared
     // }
     throw std::runtime_error("Cannot dot product tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
 }
-std::shared_ptr<TensorImpl> transpose(std::shared_ptr<const TensorImpl> a) {
-    if (a->shape.size() > 2) {
-        throw std::runtime_error("Transpose supported for tensors up to 2 dimensions");
-    }
-    if (a->shape.size() == 0) {
-        return create_tensorimpl(std::vector<float>(), {}, {}, a->requires_grad);;
-    }
-    if (a->shape.size() == 1) {
-        return create_tensorimpl(a->storage->data, {1, a->shape[0]}, {a->shape[0], 1}, a->requires_grad);
-    }
-    std::vector<size_t> new_shape({a->shape[1], a->shape[0]});
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector<float>(a->storage->data.size(), 0.f), new_shape, {new_shape[1], 1}, a->requires_grad);
-    for (size_t i = 0; i < a->shape[0]; ++i) {
-        for (size_t j = 0; j < a->shape[1]; ++j) {
-            res->storage->data[calculate_offset(res, {j, i})] = a->storage->data[calculate_offset(a, {i, j})];
-        }
-    }
-    return res;
-}
 
-std::shared_ptr<TensorImpl> power(std::shared_ptr<const TensorImpl> a, float x) {
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->storage->data), a->shape, a->strides, a->requires_grad);
+shared_ptr<TensorImpl> power(shared_ptr<const TensorImpl> a, float x) {
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(a->storage->data, a->shape, a->strides, a->requires_grad);
     for (size_t i = 0; i < a->storage->data.size(); ++i) {
         res->storage->data[i] = std::pow(res->storage->data[i], x);
     }
     return res;
 }
-std::shared_ptr<TensorImpl> exp(std::shared_ptr<const TensorImpl> a) {
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->storage->data), a->shape, a->strides, a->requires_grad);
+shared_ptr<TensorImpl> exp(shared_ptr<const TensorImpl> a) {
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(a->storage->data, a->shape, a->strides, a->requires_grad);
     for (size_t i = 0; i < a->storage->data.size(); ++i) {
         res->storage->data[i] = std::pow(std::numbers::e_v<float>, res->storage->data[i]);
     }
     return res;
 }
-std::shared_ptr<TensorImpl> log(std::shared_ptr<const TensorImpl> a) {
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->storage->data), a->shape, a->strides, a->requires_grad);
+shared_ptr<TensorImpl> log(shared_ptr<const TensorImpl> a) {
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(a->storage->data, a->shape, a->strides, a->requires_grad);
     for (size_t i = 0; i < a->storage->data.size(); ++i) {
         res->storage->data[i] = std::log(res->storage->data[i]);
     }
@@ -183,7 +167,7 @@ std::shared_ptr<TensorImpl> log(std::shared_ptr<const TensorImpl> a) {
 }
 
 // TODO: replace later with reshaping?
-std::shared_ptr<TensorImpl> col_to_vec(std::shared_ptr<TensorImpl> a) {
+shared_ptr<TensorImpl> col_to_vec(shared_ptr<TensorImpl> a) {
     if (a->shape.size() != 2 || a->shape[1] != 1) {
         throw std::runtime_error("Only 2D column Tensors can be converted to 1D Tensor");
     }
@@ -195,7 +179,7 @@ std::shared_ptr<TensorImpl> col_to_vec(std::shared_ptr<TensorImpl> a) {
     }
     return a;
 }
-std::shared_ptr<TensorImpl> vec_to_col(std::shared_ptr<TensorImpl> a) {
+shared_ptr<TensorImpl> vec_to_col(shared_ptr<TensorImpl> a) {
     if (a->shape.size() != 1) {
         throw std::runtime_error("Only 1D Tensors can be converted to column Tensor");
     }

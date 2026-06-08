@@ -2,9 +2,12 @@
 #include "utils/tensor_utils.h"
 #include <algorithm>
 
+using std::shared_ptr;
+using std::make_shared;
+
 // TODO:nD versions of operations (currently only 0D, 1D, 2D)
 namespace kernels {
-std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
+shared_ptr<TensorImpl> sum(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     // NOTE: sum using double for better stability (implement more stable algorithm later)
     if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
         // sum over all values
@@ -12,7 +15,7 @@ std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim,
         for (size_t i = 0; i < a->storage->data.size(); ++i) {
             s += a->storage->data[i];
         }
-        std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(1, float(s)), {1}, {1}, a->requires_grad);
+        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(float(s), std::vector<size_t>({1}), a->requires_grad);
         return res;
     }
     if (dim >= a->shape.size()) {
@@ -29,7 +32,7 @@ std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim,
     } else {
         new_shape.erase(new_shape.begin()+dim);
     }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->shape[other_dim], 0.f), new_shape, calculate_strides(new_shape), a->requires_grad);
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, new_shape, a->requires_grad);
     std::vector<size_t> curr_index{0, 0};
     // iterate over other dimension
     for (size_t i = 0; i < a->shape[other_dim]; ++i) {
@@ -44,20 +47,20 @@ std::shared_ptr<TensorImpl> sum(std::shared_ptr<const TensorImpl> a, size_t dim,
     }
     return res;
 }
-std::shared_ptr<TensorImpl> mean(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
+shared_ptr<TensorImpl> mean(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     // TODO: improve stability
     size_t n = dim == SIZE_T_MAX ? a->storage->data.size() : a->shape[dim];
-    std::shared_ptr<TensorImpl> res = sum(a, dim);
+    shared_ptr<TensorImpl> res = sum(a, dim);
     for (size_t i = 0; i < res->storage->data.size(); ++i) {
         res->storage->data[i] /= n;
     }
     return res;
 }
-std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
+shared_ptr<TensorImpl> max(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, shared_ptr<std::vector<size_t>>* offsets_pptr) {
     if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
         // max over all values
         auto it = std::max_element(a->storage->data.begin(), a->storage->data.end());
-        std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(1, *it), {1}, {1}, a->requires_grad);
+        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>({1}), a->requires_grad);
         if (offsets_pptr) {
             // Store offsets for gradient calculation
             *offsets_pptr = std::make_unique<std::vector<size_t>>(1);
@@ -79,7 +82,7 @@ std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim,
     } else {
         new_shape.erase(new_shape.begin()+dim);
     }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->shape[other_dim], 0.f), new_shape, calculate_strides(new_shape), a->requires_grad);
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, new_shape, a->requires_grad);
     std::vector<size_t> curr_index{0, 0};
     if (offsets_pptr) {
         // Store indices for gradient calculation
@@ -109,11 +112,11 @@ std::shared_ptr<TensorImpl> max(std::shared_ptr<const TensorImpl> a, size_t dim,
     }
     return res;
 }
-std::shared_ptr<TensorImpl> min(std::shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, std::shared_ptr<std::vector<size_t>>* offsets_pptr) {
+shared_ptr<TensorImpl> min(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, shared_ptr<std::vector<size_t>>* offsets_pptr) {
     if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
         // min over all values
         auto it = std::min_element(a->storage->data.begin(), a->storage->data.end());
-        std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(1, *it), {1}, {1}, a->requires_grad);
+        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>({1}), a->requires_grad);
         if (offsets_pptr) {
             // Store offsets for gradient calculation
             *offsets_pptr = std::make_unique<std::vector<size_t>>(1);
@@ -135,7 +138,7 @@ std::shared_ptr<TensorImpl> min(std::shared_ptr<const TensorImpl> a, size_t dim,
     } else {
         new_shape.erase(new_shape.begin()+dim);
     }
-    std::shared_ptr<TensorImpl> res = create_tensorimpl(std::vector(a->shape[other_dim], 0.f), new_shape, calculate_strides(new_shape), a->requires_grad);
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, new_shape, a->requires_grad);
     std::vector<size_t> curr_index{0, 0};
     if (offsets_pptr) {
         // Store indices for gradient calculation

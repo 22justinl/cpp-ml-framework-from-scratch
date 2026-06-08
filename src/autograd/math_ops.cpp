@@ -1,5 +1,6 @@
 #include "autograd/math_ops.h"
 #include "kernels/math_ops.h"
+#include "kernels/tensor_ops.h"
 #include "core/broadcast.h"
 #include "utils/tensor_utils.h"
 

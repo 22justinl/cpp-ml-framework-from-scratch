@@ -117,12 +117,3 @@ size_t calculate_n_el(const std::vector<size_t>& shape) {
     }
     return n_el;
 }
-std::shared_ptr<TensorImpl> create_tensorimpl(const std::vector<float>& data, const std::vector<size_t>& shape, const std::vector<size_t>& strides, bool requires_grad) {
-    if (calculate_n_el(shape) != data.size()) {
-        throw std::runtime_error("Not enough data to initialize tensor");
-    }
-    if (requires_grad) {
-        return std::make_shared<TensorImpl>(data, shape, strides, requires_grad, new Tensor(0.f, shape));
-    }
-    return std::make_shared<TensorImpl>(data, shape, strides, requires_grad, nullptr);
-}
