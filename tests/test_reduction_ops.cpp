@@ -46,3 +46,59 @@ TEST_CASE("Tensor min") {
     CHECK(check_tensor_equal(res3, Tensor({1,4}, {2})));
     CHECK(check_tensor_equal(res4, Tensor({1}, {1})));
 }
+
+TEST_CASE("Tensor sum (nD)") {
+    Tensor t1({
+            0,1,2,3,
+            4,5,6,7,
+
+            8,9,10,11,
+            12,13,14,15,
+
+            16,17,18,19,
+            20,21,22,23}, {3,2,4});
+    CHECK(check_tensor_equal(sum(t1, 0), Tensor({24,27,30,33,36,39,42,45},{2,4})));
+    CHECK(check_tensor_equal(sum(t1, 1), Tensor({4,6,8,10,20,22,24,26,36,38,40,42},{3,4})));
+    CHECK(check_tensor_equal(sum(t1, 2), Tensor({6,22,38,54,70,86},{3,2})));
+
+    CHECK(check_tensor_equal(sum(t1, 0, true), Tensor({24,27,30,33,36,39,42,45},{1,2,4})));
+    CHECK(check_tensor_equal(sum(t1, 1, true), Tensor({4,6,8,10,20,22,24,26,36,38,40,42},{3,1,4})));
+    CHECK(check_tensor_equal(sum(t1, 2, true), Tensor({6,22,38,54,70,86},{3,2,1})));
+}
+
+TEST_CASE("Tensor max (nD)") {
+    Tensor t1({
+            0,1,2,3,
+            4,5,6,7,
+
+            8,9,10,11,
+            12,13,14,15,
+
+            16,17,18,19,
+            20,21,22,23}, {3,2,4});
+    CHECK(check_tensor_equal(max(t1, 0), Tensor({16,17,18,19,20,21,22,23},{2,4})));
+    CHECK(check_tensor_equal(max(t1, 1), Tensor({4,5,6,7,12,13,14,15,20,21,22,23},{3,4})));
+    CHECK(check_tensor_equal(max(t1, 2), Tensor({3,7,11,15,19,23},{3,2})));
+
+    CHECK(check_tensor_equal(max(t1, 0, true), Tensor({16,17,18,19,20,21,22,23},{1,2,4})));
+    CHECK(check_tensor_equal(max(t1, 1, true), Tensor({4,5,6,7,12,13,14,15,20,21,22,23},{3,1,4})));
+    CHECK(check_tensor_equal(max(t1, 2, true), Tensor({3,7,11,15,19,23},{3,2,1})));
+}
+TEST_CASE("Tensor min (nD)") {
+    Tensor t1({
+            0,1,2,3,
+            4,5,6,7,
+
+            8,9,10,11,
+            12,13,14,15,
+
+            16,17,18,19,
+            20,21,22,23}, {3,2,4});
+    CHECK(check_tensor_equal(min(t1, 0), Tensor({0,1,2,3,4,5,6,7},{2,4})));
+    CHECK(check_tensor_equal(min(t1, 1), Tensor({0,1,2,3,8,9,10,11,16,17,18,19},{3,4})));
+    CHECK(check_tensor_equal(min(t1, 2), Tensor({0,4,8,12,16,20},{3,2})));
+
+    CHECK(check_tensor_equal(min(t1, 0, true), Tensor({0,1,2,3,4,5,6,7},{1,2,4})));
+    CHECK(check_tensor_equal(min(t1, 1, true), Tensor({0,1,2,3,8,9,10,11,16,17,18,19},{3,1,4})));
+    CHECK(check_tensor_equal(min(t1, 2, true), Tensor({0,4,8,12,16,20},{3,2,1})));
+}

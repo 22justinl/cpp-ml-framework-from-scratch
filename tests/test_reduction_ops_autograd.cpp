@@ -84,3 +84,95 @@ TEST_CASE("Tensor min autograd") {
     res4.backward();
     CHECK(check_tensor_equal(t2.grad(), Tensor({1,0,0,0,0,0}, {6})));
 }
+
+TEST_CASE("Tensor sum (nD)") {
+    Tensor t1({
+            0,1,2,3,
+            4,5,6,7,
+
+            8,9,10,11,
+            12,13,14,15,
+
+            16,17,18,19,
+            20,21,22,23}, {3,2,4}, true);
+    Tensor res1 = sum(t1, 0);
+    t1.zero_grad();
+    res1.backward();
+    CHECK(check_tensor_equal(t1.grad(), Tensor(1,{3,2,4})));
+    res1 = sum(t1, 0, true);
+    t1.zero_grad();
+    res1.backward();
+    CHECK(check_tensor_equal(t1.grad(), Tensor(1,{3,2,4})));
+}
+
+TEST_CASE("Tensor max (nD)") {
+    Tensor t1({
+            0,1,2,3,
+            4,5,6,7,
+
+            8,9,10,11,
+            12,13,14,15,
+
+            16,17,18,19,
+            20,21,22,23}, {3,2,4}, true);
+    Tensor res1 = max(t1, 0);
+    t1.zero_grad();
+    res1.backward();
+    CHECK(check_tensor_equal(t1.grad(), Tensor({
+                    0,0,0,0,
+                    0,0,0,0,
+
+                    0,0,0,0,
+                    0,0,0,0,
+
+                    1,1,1,1,
+                    1,1,1,1},{3,2,4})));
+    res1 = max(t1, 0, true);
+    t1.zero_grad();
+    res1.backward();
+    CHECK(check_tensor_equal(t1.grad(), Tensor({
+                    0,0,0,0,
+                    0,0,0,0,
+
+                    0,0,0,0,
+                    0,0,0,0,
+
+                    1,1,1,1,
+                    1,1,1,1},{3,2,4})));
+}
+
+TEST_CASE("Tensor min (nD)") {
+    Tensor t1({
+            0,1,2,3,
+            4,5,6,7,
+
+            8,9,10,11,
+            12,13,14,15,
+
+            16,17,18,19,
+            20,21,22,23}, {3,2,4}, true);
+    Tensor res1 = min(t1, 0);
+    t1.zero_grad();
+    res1.backward();
+    CHECK(check_tensor_equal(t1.grad(), Tensor({
+                    1,1,1,1,
+                    1,1,1,1,
+
+                    0,0,0,0,
+                    0,0,0,0,
+
+                    0,0,0,0,
+                    0,0,0,0},{3,2,4})));
+    res1 = min(t1, 0, true);
+    t1.zero_grad();
+    res1.backward();
+    CHECK(check_tensor_equal(t1.grad(), Tensor({
+                    1,1,1,1,
+                    1,1,1,1,
+
+                    0,0,0,0,
+                    0,0,0,0,
+
+                    0,0,0,0,
+                    0,0,0,0},{3,2,4})));
+}

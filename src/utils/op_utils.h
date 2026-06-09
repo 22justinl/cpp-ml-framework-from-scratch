@@ -23,10 +23,10 @@ Tensor monop_helper(const Tensor& t1) {
 }
 
 template <class RedOp>
-Tensor redop_helper(const Tensor& t1, size_t dim) {
-    Tensor t2 = RedOp::forward(t1, dim);
+Tensor redop_helper(const Tensor& t1, size_t dim, bool keepdim) {
+    Tensor t2 = RedOp::forward(t1, dim, keepdim);
     if (t1.requires_grad() || t2.requires_grad()) {
-        std::shared_ptr<RedOp> op = std::make_shared<RedOp>(t1, dim, t2);
+        std::shared_ptr<RedOp> op = std::make_shared<RedOp>(t1, dim, keepdim, t2);
         t2.set_grad_fn(op);
     }
     return t2;

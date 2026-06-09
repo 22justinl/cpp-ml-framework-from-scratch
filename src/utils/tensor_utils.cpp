@@ -4,9 +4,9 @@
 #include <iostream>
 #include <vector>
 
-void increment_idx(const Tensor& t, std::vector<size_t>& idx) {
-    for (size_t dim = t.shape().size()-1; dim != SIZE_T_MAX; --dim) {
-        if (idx[dim]+1 < t.shape()[dim]) {
+void increment_idx(std::shared_ptr<TensorImpl> t, std::vector<size_t>& idx) {
+    for (size_t dim = t->shape.size()-1; dim != SIZE_T_MAX; --dim) {
+        if (idx[dim]+1 < t->shape[dim]) {
             idx[dim] += 1;
             return;
         }
@@ -23,7 +23,7 @@ bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps) {
         if (std::fabs(t1(idx) - t2(idx)) >= eps) {
             return false;
         }
-        increment_idx(t1, idx);
+        increment_idx(t1.impl(), idx);
     }
     return true;
 }
@@ -104,22 +104,6 @@ size_t calculate_n_el(const std::vector<size_t>& shape) {
     return n_el;
 }
 
-// NOTE: remove later: doesn't work with views due to stride ordering
-void offset_to_idx(size_t offset, const std::vector<size_t>& strides, std::vector<size_t>& idx) {
-    for (size_t i = 0; i < strides.size(); ++i) {
-        idx[i] = offset/strides[i];
-        offset = offset % strides[i];
-    }
-}
-// NOTE: remove later: doesn't work with views due to stride ordering
-std::vector<size_t> offset_to_idx(size_t offset, const std::vector<size_t>& strides) {
-    std::vector<size_t> idx;
-    for (size_t i = 0; i < strides.size(); ++i) {
-        idx[i] = offset/strides[i];
-        offset = offset % strides[i];
-    }
-    return idx;
-}
 size_t idx_to_offset(const std::vector<size_t>& idx, const std::vector<size_t>& strides, size_t t_offset) {
     size_t offset = t_offset;
     for (size_t i = 0; i < strides.size(); ++i) {

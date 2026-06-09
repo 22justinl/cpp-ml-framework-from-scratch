@@ -7,12 +7,12 @@
 using std::shared_ptr;
 using std::make_shared;
 
-SumOp::SumOp(const Tensor& t1, size_t dim, const Tensor& t2): dim(dim) {
+SumOp::SumOp(const Tensor& t1, size_t dim, bool keepdim, const Tensor& t2): dim(dim) {
     a = t1.impl();
     out = t2.impl();
 }
-Tensor SumOp::forward(const Tensor& t1, size_t dim) {
-    return Tensor(kernels::sum(t1.impl(), dim));
+Tensor SumOp::forward(const Tensor& t1, size_t dim, bool keepdim) {
+    return Tensor(kernels::sum(t1.impl(), dim, keepdim));
 }
 void SumOp::backward() {
     if (!a->requires_grad || a->shape.size() == 0) {
@@ -20,26 +20,24 @@ void SumOp::backward() {
     }
     if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], make_shared<TensorImpl>(1, a->shape, a->strides, false)));
-    } else if (a->shape.size() == 2) {
+    } else {
         shared_ptr<TensorImpl> grad = make_shared<TensorImpl>(1, a->shape, a->strides, a->requires_grad);
         shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
         BroadcastInfo b_info = construct_broadcast_info(grad, out_grad);
         grad = kernels::mul_broadcast(grad, out_grad, b_info);
         kernels::add_inplace(a->grad->impl(), grad);
-    } else {
-        throw std::runtime_error("Sum operation gradient for nD not implemented");
     }
 }
 std::vector<shared_ptr<const TensorImpl>> SumOp::inputs() {
     return {a};
 }
 
-MeanOp::MeanOp(const Tensor& t1, size_t dim, const Tensor& t2): dim(dim) {
+MeanOp::MeanOp(const Tensor& t1, size_t dim, bool keepdim, const Tensor& t2): dim(dim) {
     a = t1.impl();
     out = t2.impl();
 }
-Tensor MeanOp::forward(const Tensor& t1, size_t dim) {
-    return Tensor(kernels::mean(t1.impl(), dim));
+Tensor MeanOp::forward(const Tensor& t1, size_t dim, bool keepdim) {
+    return Tensor(kernels::mean(t1.impl(), dim, keepdim));
 }
 void MeanOp::backward() {
     if (!a->requires_grad || a->shape.size() == 0) {
@@ -48,80 +46,61 @@ void MeanOp::backward() {
     if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
         size_t n = dim == SIZE_T_MAX ? a->storage->data.size() : a->shape[dim];
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], make_shared<TensorImpl>(1.0/n, a->shape, a->strides, false)));
-    } else if (a->shape.size() == 2) {
+    } else {
         size_t n = a->shape[dim];
         shared_ptr<TensorImpl> grad = make_shared<TensorImpl>(1.0/n, a->shape, a->strides, false);
         shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
         BroadcastInfo b_info = construct_broadcast_info(grad, out_grad);
         grad = kernels::mul_broadcast(grad, out_grad, b_info);
         kernels::add_inplace(a->grad->impl(), grad);
-    } else {
-        throw std::runtime_error("Mean operation gradient for nD not implemented");
     }
 }
 std::vector<shared_ptr<const TensorImpl>> MeanOp::inputs() {
     return {a};
 }
 
-MaxOp::MaxOp(const Tensor& t1, size_t dim, shared_ptr<std::vector<size_t>> offsets_ptr, const Tensor& t2): dim(dim), offsets_ptr(offsets_ptr) {
+MaxOp::MaxOp(const Tensor& t1, size_t dim, bool keepdim, shared_ptr<TensorImpl> max_pos, const Tensor& t2): dim(dim), max_pos(max_pos) {
     a = t1.impl();
     out = t2.impl();
 }
-Tensor MaxOp::forward(const Tensor& t1, size_t dim, shared_ptr<std::vector<size_t>>* offsets_pptr) {
-    return Tensor(kernels::max(t1.impl(), dim, false, offsets_pptr));
+Tensor MaxOp::forward(const Tensor& t1, size_t dim, bool keepdim, shared_ptr<TensorImpl>* max_pos_ptr) {
+    return Tensor(kernels::max(t1.impl(), dim, keepdim, max_pos_ptr));
 }
 void MaxOp::backward() {
     if (!a->requires_grad || a->shape.size() == 0) {
         return;
     }
     if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
-        shared_ptr<TensorImpl> temp = make_shared<TensorImpl>(0, a->shape, a->strides, false);
-        temp->storage->data[(*offsets_ptr)[0]] = 1;
-        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], temp));
-    } else if (a->shape.size() == 2) {
-        shared_ptr<TensorImpl> temp = make_shared<TensorImpl>(0, a->shape, a->strides, false);
-        shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
-        for (size_t i = 0; i < a->shape[1-dim]; ++i) {
-            temp->storage->data[(*offsets_ptr)[i]] = 1;
-        }
-        BroadcastInfo b_info = construct_broadcast_info(temp, out_grad);
-        temp = kernels::mul_broadcast(temp, out_grad, b_info);
-        kernels::add_inplace(a->grad->impl(), temp);
+        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], max_pos));
     } else {
-        throw std::runtime_error("Max operation gradient for nD not implemented");
+        // if input is 2D with keepdim=false, we need to distinguish between dim=0 and dim=1 since output is 1D tensor
+        shared_ptr<TensorImpl> out_grad = out->shape.size() == 1 && dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
+        BroadcastInfo b_info = construct_broadcast_info(max_pos, out_grad);
+        kernels::add_inplace(a->grad->impl(), kernels::mul_broadcast(max_pos, out_grad, b_info));
     }
 }
 std::vector<shared_ptr<const TensorImpl>> MaxOp::inputs() {
     return {a};
 }
 
-MinOp::MinOp(const Tensor& t1, size_t dim, shared_ptr<std::vector<size_t>> offsets_ptr, const Tensor& t2): dim(dim), offsets_ptr(offsets_ptr) {
+MinOp::MinOp(const Tensor& t1, size_t dim, bool keepdim, shared_ptr<TensorImpl> min_pos, const Tensor& t2): dim(dim), min_pos(min_pos) {
     a = t1.impl();
     out = t2.impl();
 }
-Tensor MinOp::forward(const Tensor& t1, size_t dim, shared_ptr<std::vector<size_t>>* offsets_pptr) {
-    return Tensor(kernels::min(t1.impl(), dim, false, offsets_pptr));
+Tensor MinOp::forward(const Tensor& t1, size_t dim, bool keepdim, shared_ptr<TensorImpl>* min_pos_ptr) {
+    return Tensor(kernels::min(t1.impl(), dim, keepdim, min_pos_ptr));
 }
 void MinOp::backward() {
     if (!a->requires_grad || a->shape.size() == 0) {
         return;
     }
     if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
-        std::vector<float> temp_data(a->storage->data.size(), 0);
-        temp_data[(*offsets_ptr)[0]] = 1;
-        shared_ptr<TensorImpl> temp = make_shared<TensorImpl>(temp_data, a->shape, a->strides, false);
-        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], temp));
-    } else if (a->shape.size() == 2) {
-        shared_ptr<TensorImpl> temp = make_shared<TensorImpl>(0, a->shape, a->strides, false);
-        shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
-        for (size_t i = 0; i < a->shape[1-dim]; ++i) {
-            temp->storage->data[(*offsets_ptr)[i]] = 1;
-        }
-        BroadcastInfo b_info = construct_broadcast_info(temp, out_grad);
-        temp = kernels::mul_broadcast(temp, out_grad, b_info);
-        kernels::add_inplace(a->grad->impl(), temp);
+        kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], min_pos));
     } else {
-        throw std::runtime_error("Min operation gradient for nD not implemented");
+        // if input is 2D with keepdim=false, we need to distinguish between dim=0 and dim=1 since output is 1D tensor
+        shared_ptr<TensorImpl> out_grad = out->shape.size() == 1 && dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
+        BroadcastInfo b_info = construct_broadcast_info(min_pos, out_grad);
+        kernels::add_inplace(a->grad->impl(), kernels::mul_broadcast(min_pos, out_grad, b_info));
     }
 }
 std::vector<shared_ptr<const TensorImpl>> MinOp::inputs() {

@@ -3,7 +3,7 @@
 #include "core/tensor.h"
 #include <string>
 
-void increment_idx(const Tensor& t, std::vector<size_t>& idx);
+void increment_idx(std::shared_ptr<TensorImpl> t, std::vector<size_t>& idx);
 bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps = 1e-7);
 bool check_shape_match(const std::vector<size_t> shape1, const std::vector<size_t> shape2);
 
@@ -14,7 +14,5 @@ void print_recursive(const Tensor& t1, const std::vector<size_t>& idx, size_t di
 std::vector<size_t> calculate_strides(const std::vector<size_t>& tensor_shape);
 size_t calculate_n_el(const std::vector<size_t>& shape);
 
-void offset_to_idx(size_t offset, const std::vector<size_t>& strides, std::vector<size_t>& idx); // inplace
-std::vector<size_t> offset_to_idx(size_t offset, const std::vector<size_t>& strides);
 size_t idx_to_offset(const std::vector<size_t>& idx, const std::vector<size_t>& strides, size_t t_offset);
 size_t idx_to_offset_checked(const std::vector<size_t>& idx, const std::vector<size_t>& shape, const std::vector<size_t>& strides, size_t t_offset);

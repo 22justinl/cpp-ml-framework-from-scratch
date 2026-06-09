@@ -27,8 +27,8 @@ shared_ptr<TensorImpl> elementwise_binary_op_broadcast(shared_ptr<const TensorIm
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, out_shape, out_strides, a->requires_grad || b->requires_grad);
     std::vector<size_t> idx(out_shape.size(), 0);
     for (size_t i = 0; i < res->storage->data.size(); ++i) {
-        offset_to_idx(i, out_strides, idx);
         res->storage->data[i] = op(a->storage->data[idx_to_offset(idx, a_strides, a->offset)], b->storage->data[idx_to_offset(idx, b_strides, b->offset)]);
+        increment_idx(res, idx);
     }
     return res;
 }
@@ -47,8 +47,8 @@ void elementwise_binary_op_inplace_broadcast(shared_ptr<TensorImpl> a, shared_pt
     const std::vector<size_t>& b_strides = b_info.b_strides;
     std::vector<size_t> idx(a->shape.size(), 0);
     for (size_t i = 0; i < a->storage->data.size(); ++i) {
-        offset_to_idx(i, a->shape, idx);
         a->storage->data[i] = op(a->storage->data[i], b->storage->data[idx_to_offset(idx, b_strides, b->offset)]);
+        increment_idx(a, idx);
     }
 }
 void add_inplace(shared_ptr<TensorImpl> a, shared_ptr<const TensorImpl> b);
