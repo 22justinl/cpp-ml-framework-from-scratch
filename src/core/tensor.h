@@ -24,9 +24,9 @@ public:
     Tensor(std::shared_ptr<TensorImpl> impl);
 
     float& operator()(const std::initializer_list<size_t> indices);
-    float& operator()(const std::vector<size_t> indices);
+    float& operator()(const std::vector<size_t>& indices);
     float operator()(const std::initializer_list<size_t> indices) const;
-    float operator()(const std::vector<size_t> indices) const;
+    float operator()(const std::vector<size_t>& indices) const;
     Tensor operator+(const Tensor& other) const;
     Tensor operator-(const Tensor& other) const;
     Tensor operator*(const Tensor& other) const;

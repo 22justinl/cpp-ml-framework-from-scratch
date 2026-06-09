@@ -4,31 +4,30 @@
 #include <iostream>
 #include <vector>
 
+void increment_idx(const Tensor& t, std::vector<size_t>& idx) {
+    for (size_t dim = t.shape().size()-1; dim != SIZE_T_MAX; --dim) {
+        if (idx[dim]+1 < t.shape()[dim]) {
+            idx[dim] += 1;
+            return;
+        }
+        idx[dim] = 0;
+    }
+}
+
 bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps) {
     if (!check_shape_match(t1.shape(), t2.shape())) {
         return false;
     }
-    if (t1.shape().size() == 0) {
-        return true;
-    }
-    if (t1.shape().size() == 1) {
-        for (size_t i = 0; i < t1.shape()[0]; ++i) {
-            if (std::fabs(t1({i}) - t2({i})) >= eps) {
-                return false;
-            }
+    std::vector<size_t> idx(t1.shape().size(), 0);
+    for (size_t i = 0; i < t1.impl()->n_el; ++i) {
+        if (std::fabs(t1(idx) - t2(idx)) >= eps) {
+            return false;
         }
-        return true;
+        increment_idx(t1, idx);
     }
-    for (size_t i = 0; i < t1.shape()[0]; ++i) {
-        for (size_t j = 0; j < t1.shape()[1]; ++j) {
-            if (std::fabs(t1({i, j}) - t2({i, j})) >= eps) {
-                return false;
-            }
-        }
-    }
-
     return true;
 }
+
 bool check_shape_match(const std::vector<size_t> shape1, const std::vector<size_t> shape2) {
     if (shape1.size() != shape2.size()) {
         return false;
@@ -53,28 +52,29 @@ std::string shape_to_string(const std::vector<size_t>& shape) {
     return s;
 }
 void print_tensor(const Tensor& t1) {
-    if (t1.shape().size() == 0) {
-        std::cout << "[]" << std::endl;
+    std::vector<size_t> idx(t1.shape().size(), 0);
+    print_recursive(t1, idx, 0);
+}
+void print_recursive(const Tensor& t1, const std::vector<size_t>& idx, size_t dim) {
+    if (dim == t1.shape().size()) {
+        if (idx[dim-1] + 1 < t1.shape()[dim-1]) {
+            std::cout << t1(idx) << ", ";
+        } else {
+            std::cout << t1(idx);
+        }
         return;
     }
-    if (t1.shape().size() == 1) {
+    if (dim+1 != t1.shape().size()) {
+        std::cout << "[\n";
+    } else {
         std::cout << "[";
-        for (size_t i = 0; i < t1.shape()[0]; ++i) {
-            std::cout << t1({i}) << "\t\t";
-        }
-        std::cout << "]" << std::endl;
-        return;
     }
-
-    std::cout << "[" << std::endl;
-    for (size_t i = 0; i < t1.shape()[0]; ++i) {
-        std::cout << "[";
-        for (size_t j = 0; j < t1.shape()[1]; ++j) {
-            std::cout << t1({i, j}) << "\t\t";
-        }
-        std::cout << "]" << std::endl;
+    for (size_t i = 0; i < t1.shape()[dim]; ++i) {
+        std::vector<size_t> next_idx = idx;
+        next_idx[dim] = i;
+        print_recursive(t1, next_idx, dim+1);
     }
-    std::cout << "]" << std::endl;
+    std::cout << "]\n";
 }
 
 std::vector<size_t> calculate_strides(const std::vector<size_t>& tensor_shape) {
@@ -89,20 +89,6 @@ std::vector<size_t> calculate_strides(const std::vector<size_t>& tensor_shape) {
     }
     return strides;
 }
-size_t calculate_offset(std::shared_ptr<const TensorImpl> impl, const std::vector<size_t>& indices) {
-    if (indices.size() != impl->shape.size()) {
-        throw std::runtime_error("Index shape mismatch");
-    }
-    size_t offset = 0;
-    for (size_t i = 0; i < impl->shape.size(); ++i) {
-        size_t idx = indices[i];
-        if (idx >= impl->shape[i]) {
-            throw std::runtime_error("Index out of range");
-        }
-        offset += impl->strides[i] * idx;
-    }
-    return offset;
-}
 size_t calculate_n_el(const std::vector<size_t>& shape) {
     if (shape.size() == 0) {
         return 0;
@@ -116,4 +102,41 @@ size_t calculate_n_el(const std::vector<size_t>& shape) {
         }
     }
     return n_el;
+}
+
+// NOTE: remove later: doesn't work with views due to stride ordering
+void offset_to_idx(size_t offset, const std::vector<size_t>& strides, std::vector<size_t>& idx) {
+    for (size_t i = 0; i < strides.size(); ++i) {
+        idx[i] = offset/strides[i];
+        offset = offset % strides[i];
+    }
+}
+// NOTE: remove later: doesn't work with views due to stride ordering
+std::vector<size_t> offset_to_idx(size_t offset, const std::vector<size_t>& strides) {
+    std::vector<size_t> idx;
+    for (size_t i = 0; i < strides.size(); ++i) {
+        idx[i] = offset/strides[i];
+        offset = offset % strides[i];
+    }
+    return idx;
+}
+size_t idx_to_offset(const std::vector<size_t>& idx, const std::vector<size_t>& strides, size_t t_offset) {
+    size_t offset = t_offset;
+    for (size_t i = 0; i < strides.size(); ++i) {
+        offset += idx[i] * strides[i];
+    }
+    return offset;
+}
+size_t idx_to_offset_checked(const std::vector<size_t>& idx, const std::vector<size_t>& shape, const std::vector<size_t>& strides, size_t t_offset) {
+    if (idx.size() != shape.size()) {
+        throw std::runtime_error("Index shape mismatch");
+    }
+    size_t offset = t_offset;
+    for (size_t i = 0; i < strides.size(); ++i) {
+        if (idx[i] >= shape[i]) {
+            throw std::runtime_error("Index out of range");
+        }
+        offset += idx[i] * strides[i];
+    }
+    return offset;
 }

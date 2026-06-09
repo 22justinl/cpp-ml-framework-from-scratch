@@ -40,21 +40,6 @@ const std::vector<size_t> compute_broadcast_strides(const std::vector<size_t>& o
     return new_strides;
 }
 
-void map_offset_to_idx(size_t offset, const std::vector<size_t>& strides, std::vector<size_t>& idx) {
-    for (size_t i = 0; i < strides.size(); ++i) {
-        idx[i] = offset/strides[i];
-        offset = offset % strides[i];
-    }
-}
-
-size_t map_idx_to_offset(const std::vector<size_t>& idx, const std::vector<size_t>& strides) {
-    size_t offset = 0;
-    for (size_t i = 0; i < strides.size(); ++i) {
-        offset += idx[i] * strides[i];
-    }
-    return offset;
-}
-
 std::shared_ptr<TensorImpl> reduce_to_shape(std::shared_ptr<TensorImpl> a, const std::vector<size_t>& shape) {
     if (check_shape_match(a->shape, shape)) {
         return a;

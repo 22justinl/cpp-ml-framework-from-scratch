@@ -1,5 +1,7 @@
 #include "kernels/math_ops.h"
 
+#include "utils/tensor_utils.h"
+
 #include <numbers>
 
 using std::shared_ptr;
@@ -86,7 +88,7 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
     for (size_t i = 0; i < a_shape[0]; ++i) {
         for (size_t j = 0; j < b_shape[1]; ++j) {
             for (size_t k = 0; k < a_shape[1]; ++k) {
-                res->storage->data[calculate_offset(res, {i, j})] += a->storage->data[calculate_offset(a, {i, k})] * b->storage->data[calculate_offset(b, {k, j})];
+                res->storage->data[idx_to_offset({i, j}, res->strides, res->offset)] += a->storage->data[idx_to_offset({i, k}, a->strides, a->offset)] * b->storage->data[idx_to_offset({k, j}, b->strides, b->offset)];
             }
         }
     }
@@ -106,7 +108,7 @@ shared_ptr<TensorImpl> matvec(shared_ptr<const TensorImpl> a, shared_ptr<const T
     std::vector<float>& res_data = res->storage->data;
     for (size_t i = 0; i < t1_shape[0]; ++i) {
         for (size_t j = 0; j < t1_shape[1]; ++j) {
-            res_data[i] += a->storage->data[calculate_offset(a, {i,j})]*t2_data[j];
+            res_data[i] += a->storage->data[idx_to_offset({i,j}, a->strides, a->offset)]*t2_data[j];
         }
     }
     return res;

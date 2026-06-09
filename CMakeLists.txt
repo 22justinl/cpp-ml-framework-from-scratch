@@ -71,6 +71,18 @@ target_link_libraries(tests PRIVATE
     cpp_ml_from_scratch
 )
 
+add_executable(curr_test
+    tests/test_main.cpp
+    tests/curr_test.cpp
+)
+target_include_directories(curr_test PRIVATE
+    external/doctest
+)
+
+target_link_libraries(curr_test PRIVATE
+    cpp_ml_from_scratch
+)
+
 add_executable(xor
     examples/xor.cpp
 )

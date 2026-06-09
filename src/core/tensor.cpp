@@ -51,17 +51,11 @@ Tensor::Tensor(const std::initializer_list<float> init_data, const std::initiali
 Tensor::Tensor(const std::initializer_list<float> init_data, const std::vector<size_t> shape, bool requires_grad): Tensor(std::vector(init_data), shape, requires_grad) {}
 Tensor::Tensor(const std::vector<float> init_data, const std::initializer_list<size_t> shape, bool requires_grad): Tensor(init_data, std::vector(shape), requires_grad) {}
 Tensor::Tensor(const std::vector<float> init_data, const std::vector<size_t> shape, bool requires_grad) {
-    if (shape.size() > 2) {
-        throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
-    }
     impl_ = std::make_shared<TensorImpl>(init_data, shape, requires_grad);
 }
 
 Tensor::Tensor(const float fill_val, const std::initializer_list<size_t> shape, bool requires_grad): Tensor(fill_val, std::vector(shape), requires_grad) {}
 Tensor::Tensor(const float fill_val, const std::vector<size_t> shape, bool requires_grad) {
-    if (shape.size() > 2) {
-        throw std::runtime_error("Tensors with more than 2 dimensions not implemented");
-    }
     impl_ = std::make_shared<TensorImpl>(fill_val, shape, requires_grad);
 }
 
@@ -73,7 +67,13 @@ Tensor::Tensor(std::shared_ptr<TensorImpl> impl): impl_(impl) {}
 float& Tensor::operator()(const std::initializer_list<size_t> indices) {
     return at(indices);
 }
+float& Tensor::operator()(const std::vector<size_t>& indices) {
+    return at(indices);
+}
 float Tensor::operator()(const std::initializer_list<size_t> indices) const {
+    return at(indices);
+}
+float Tensor::operator()(const std::vector<size_t>& indices) const {
     return at(indices);
 }
 Tensor Tensor::operator+(const Tensor& other) const {
@@ -133,12 +133,12 @@ Tensor Tensor::operator-() const {
 
 float& Tensor::at(const std::initializer_list<size_t> indices) { return at(std::vector(indices)); }
 float& Tensor::at(const std::vector<size_t> indices) {
-    size_t offset = calculate_offset(impl_, indices);
+    size_t offset = idx_to_offset_checked(indices, impl_->shape, impl_->strides, impl_->offset);
     return impl_->storage->data[offset];
 }
 float Tensor::at(const std::initializer_list<size_t> indices) const { return at(std::vector(indices)); }
 float Tensor::at(const std::vector<size_t> indices) const {
-    size_t offset = calculate_offset(impl_, indices);
+    size_t offset = idx_to_offset_checked(indices, impl_->shape, impl_->strides, impl_->offset);
     return impl_->storage->data[offset];
 }
 

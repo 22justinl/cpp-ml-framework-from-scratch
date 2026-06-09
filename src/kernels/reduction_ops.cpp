@@ -1,5 +1,7 @@
 #include "kernels/reduction_ops.h"
+
 #include "utils/tensor_utils.h"
+
 #include <algorithm>
 
 using std::shared_ptr;
@@ -41,7 +43,7 @@ shared_ptr<TensorImpl> sum(shared_ptr<const TensorImpl> a, size_t dim, bool keep
         // sum over dim
         for (size_t j = 0; j < a->shape[dim]; ++j) {
             curr_index[dim] = j;
-            s += a->storage->data[calculate_offset(a, curr_index)];
+            s += a->storage->data[idx_to_offset(curr_index, a->strides, a->offset)];
         }
         res->storage->data[i] = float(s);
     }
@@ -93,14 +95,14 @@ shared_ptr<TensorImpl> max(shared_ptr<const TensorImpl> a, size_t dim, bool keep
         curr_index[other_dim] = i;
         curr_index[dim] = 0;
         // setup max value and index
-        size_t curr_offset = calculate_offset(a, curr_index);
+        size_t curr_offset = idx_to_offset(curr_index, a->strides, a->offset);
         size_t v_offset = curr_offset;
         float& v = res->storage->data[i];
         v = a->storage->data[v_offset];
         // find max
         for (size_t j = 0; j < a->shape[dim]; ++j) {
             curr_index[dim] = j;
-            curr_offset = calculate_offset(a, curr_index);
+            curr_offset = idx_to_offset(curr_index, a->strides, a->offset);
             if (a->storage->data[curr_offset] > v) {
                 v = a->storage->data[curr_offset];
                 v_offset = curr_offset;
@@ -149,14 +151,14 @@ shared_ptr<TensorImpl> min(shared_ptr<const TensorImpl> a, size_t dim, bool keep
         curr_index[other_dim] = i;
         curr_index[dim] = 0;
         // setup min value and index
-        size_t curr_offset = calculate_offset(a, curr_index);
+        size_t curr_offset = idx_to_offset(curr_index, a->strides, a->offset);
         size_t v_offset = curr_offset;
         float& v = res->storage->data[i];
         v = a->storage->data[v_offset];
         // find min
         for (size_t j = 0; j < a->shape[dim]; ++j) {
             curr_index[dim] = j;
-            curr_offset = calculate_offset(a, curr_index);
+            curr_offset = idx_to_offset(curr_index, a->strides, a->offset);
             if (a->storage->data[curr_offset] < v) {
                 v = a->storage->data[curr_offset];
                 v_offset = curr_offset;
