@@ -23,8 +23,30 @@ TEST_CASE("ReLU") {
 
 TEST_CASE("Softmax") {
     Tensor t1({0, 0, 1, 0, 0}, {5});
-    Tensor res1 = softmax(t1);
+    Tensor res1 = softmax(t1, 0);
     float denom = 4.0+std::numbers::e_v<float>;
     Tensor expected1({1.f/denom, 1.f/denom, std::numbers::e_v<float>/denom, 1.f/denom, 1.f/denom}, {5});
     CHECK(check_tensor_equal(res1, expected1));
+}
+
+TEST_CASE("Softmax (nD)") {
+    Tensor t1({1,2,3,4,5,6}, {2,3});
+    Tensor res1 = softmax(t1, 0);
+    Tensor res2 = softmax(t1, 1);
+    Tensor expected1({0.0474, 0.0474, 0.0474, 0.9526, 0.9526, 0.9526}, {2,3});
+    Tensor expected2({0.0900, 0.2447, 0.6652, 0.0900, 0.2447, 0.6652}, {2,3});
+    CHECK(check_tensor_equal(res1, expected1, 1e-3));
+    CHECK(check_tensor_equal(res2, expected2, 1e-3));
+
+    Tensor t2({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}, {2,3,4});
+    Tensor res3 = softmax(t2, 2);
+    Tensor expected3({
+            0.0321, 0.0871, 0.2369, 0.6439,
+            0.0321, 0.0871, 0.2369, 0.6439,
+            0.0321, 0.0871, 0.2369, 0.6439,
+
+            0.0321, 0.0871, 0.2369, 0.6439,
+            0.0321, 0.0871, 0.2369, 0.6439,
+            0.0321, 0.0871, 0.2369, 0.6439}, {2,3,4});
+    CHECK(check_tensor_equal(res3, expected3, 1e-3));
 }

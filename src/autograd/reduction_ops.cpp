@@ -18,7 +18,7 @@ void SumOp::backward() {
     if (!a->requires_grad || a->shape.size() == 0) {
         return;
     }
-    if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
+    if (a->shape.size() == 1 || dim == SIZE_MAX) {
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], make_shared<TensorImpl>(1, a->shape, a->strides, false)));
     } else {
         shared_ptr<TensorImpl> grad = make_shared<TensorImpl>(1, a->shape, a->strides, a->requires_grad);
@@ -43,8 +43,8 @@ void MeanOp::backward() {
     if (!a->requires_grad || a->shape.size() == 0) {
         return;
     }
-    if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
-        size_t n = dim == SIZE_T_MAX ? a->storage->data.size() : a->shape[dim];
+    if (a->shape.size() == 1 || dim == SIZE_MAX) {
+        size_t n = dim == SIZE_MAX ? a->storage->data.size() : a->shape[dim];
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], make_shared<TensorImpl>(1.0/n, a->shape, a->strides, false)));
     } else {
         size_t n = a->shape[dim];
@@ -70,7 +70,7 @@ void MaxOp::backward() {
     if (!a->requires_grad || a->shape.size() == 0) {
         return;
     }
-    if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
+    if (a->shape.size() == 1 || dim == SIZE_MAX) {
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], max_pos));
     } else {
         // if input is 2D with keepdim=false, we need to distinguish between dim=0 and dim=1 since output is 1D tensor
@@ -94,7 +94,7 @@ void MinOp::backward() {
     if (!a->requires_grad || a->shape.size() == 0) {
         return;
     }
-    if (a->shape.size() == 1 || dim == SIZE_T_MAX) {
+    if (a->shape.size() == 1 || dim == SIZE_MAX) {
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], min_pos));
     } else {
         // if input is 2D with keepdim=false, we need to distinguish between dim=0 and dim=1 since output is 1D tensor

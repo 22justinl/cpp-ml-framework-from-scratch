@@ -3,7 +3,7 @@
 #include "core/tensor.h"
 #include <string>
 
-void increment_idx(std::shared_ptr<TensorImpl> t, std::vector<size_t>& idx);
+void increment_idx(std::shared_ptr<const TensorImpl> t, std::vector<size_t>& idx);
 bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps = 1e-7);
 bool check_shape_match(const std::vector<size_t> shape1, const std::vector<size_t> shape2);
 

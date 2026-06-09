@@ -210,7 +210,7 @@ void Tensor::backward(const Tensor& out_grad) {
     std::unordered_set<std::shared_ptr<const TensorImpl>> visited;
 
     build_topo(impl_, topo, visited);
-    for (size_t i = topo.size()-1; i != SIZE_T_MAX; --i) {
+    for (size_t i = topo.size()-1; i != SIZE_MAX; --i) {
         if (topo[i]->grad_fn) {
             topo[i]->grad_fn->backward();
         }

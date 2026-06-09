@@ -1,5 +1,6 @@
 #include "activation.h"
 
+#include "core/broadcast.h"
 #include "kernels/math_ops.h"
 #include "kernels/reduction_ops.h"
 
@@ -30,18 +31,16 @@ shared_ptr<TensorImpl> relu(shared_ptr<const TensorImpl> a) {
     }
     return res;
 }
-shared_ptr<TensorImpl> softmax(shared_ptr<const TensorImpl> a) {
-    // NOTE: Assume col or row tensor
-    if (a->shape.size() != 1 && !(a->shape.size() == 2 && (a->shape[0] == 1 || a->shape[1] == 1))) {
-        throw std::runtime_error("Softmax only supported for row and column tensors");
+shared_ptr<TensorImpl> softmax(shared_ptr<const TensorImpl> a, size_t dim) {
+    if (dim == SIZE_MAX) {
+        throw std::runtime_error("Softmax requires dimension argument");
     }
-    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(a->storage->data, a->shape, a->strides, a->requires_grad);
-    float max_val = kernels::max(a)->storage->data[0];
-    res = kernels::exp(kernels::sub(res, make_shared<TensorImpl>(max_val, a->shape, a->strides, false)));
-    float denom = kernels::sum(res)->storage->data[0];
-    for (size_t i = 0; i < a->storage->data.size(); ++i) {
-        res->storage->data[i] /= denom;
-    }
+    shared_ptr<TensorImpl> max = kernels::max(a);
+    BroadcastInfo b_info = construct_broadcast_info(a, max);
+    shared_ptr<TensorImpl> res = kernels::exp(kernels::sub_broadcast(a, max, b_info)); // exp(x - max(x))
+    shared_ptr<TensorImpl> denom = kernels::sum(res, dim, true); // sum_i(exp(x_i - max(x)))
+    b_info = construct_broadcast_info(res, denom);
+    res = kernels::div_broadcast(res, denom, b_info); // exp(x-max(x))/sum_i(exp(x_i - max(x)))
     return res;
 }
 }

@@ -10,13 +10,13 @@ using std::make_shared;
 namespace kernels {
 shared_ptr<TensorImpl> sum(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     // NOTE: sum using double for better stability (implement more stable algorithm later)
-    if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
+    if (dim == SIZE_MAX || (a->shape.size() < 2 && dim == 0)) {
         // sum over all values
         double s = 0;
         for (size_t i = 0; i < a->storage->data.size(); ++i) {
             s += a->storage->data[i];
         }
-        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(float(s), std::vector<size_t>({1}), a->requires_grad);
+        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(float(s), std::vector<size_t>((keepdim ? a->shape.size() : 1), 1), a->requires_grad);
         return res;
     }
 
@@ -52,7 +52,7 @@ shared_ptr<TensorImpl> sum(shared_ptr<const TensorImpl> a, size_t dim, bool keep
 }
 shared_ptr<TensorImpl> mean(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     // TODO: improve stability
-    size_t n = dim == SIZE_T_MAX ? a->storage->data.size() : a->shape[dim];
+    size_t n = dim == SIZE_MAX ? a->storage->data.size() : a->shape[dim];
     shared_ptr<TensorImpl> res = sum(a, dim);
     for (size_t i = 0; i < res->storage->data.size(); ++i) {
         res->storage->data[i] /= n;
@@ -124,10 +124,10 @@ shared_ptr<TensorImpl> max_nd_store_pos(shared_ptr<const TensorImpl> a, size_t d
     return res;
 }
 shared_ptr<TensorImpl> max(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, shared_ptr<TensorImpl>* max_pos_ptr) {
-    if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
+    if (dim == SIZE_MAX || (a->shape.size() < 2 && dim == 0)) {
         // max over all values
         auto it = std::max_element(a->storage->data.begin(), a->storage->data.end());
-        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>({1}), a->requires_grad);
+        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>((keepdim ? a->shape.size() : 1), 1), a->requires_grad);
         if (max_pos_ptr) {
             // Store max positions for gradient calculation
             *max_pos_ptr = std::make_shared<TensorImpl>(0, a->shape, a->strides, false);
@@ -208,10 +208,10 @@ shared_ptr<TensorImpl> min_nd_store_pos(shared_ptr<const TensorImpl> a, size_t d
     return res;
 }
 shared_ptr<TensorImpl> min(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, shared_ptr<TensorImpl>* min_pos_ptr) {
-    if (dim == SIZE_T_MAX || (a->shape.size() < 2 && dim == 0)) {
+    if (dim == SIZE_MAX || (a->shape.size() < 2 && dim == 0)) {
         // min over all values
         auto it = std::min_element(a->storage->data.begin(), a->storage->data.end());
-        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>({1}), a->requires_grad);
+        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>((keepdim ? a->shape.size() : 1), 1), a->requires_grad);
         if (min_pos_ptr) {
             // Store min positions for gradient calculation
             *min_pos_ptr = std::make_shared<TensorImpl>(0, a->shape, a->strides, false);

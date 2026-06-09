@@ -4,8 +4,8 @@
 #include <iostream>
 #include <vector>
 
-void increment_idx(std::shared_ptr<TensorImpl> t, std::vector<size_t>& idx) {
-    for (size_t dim = t->shape.size()-1; dim != SIZE_T_MAX; --dim) {
+void increment_idx(std::shared_ptr<const TensorImpl> t, std::vector<size_t>& idx) {
+    for (size_t dim = t->shape.size()-1; dim != SIZE_MAX; --dim) {
         if (idx[dim]+1 < t->shape[dim]) {
             idx[dim] += 1;
             return;
@@ -84,7 +84,7 @@ std::vector<size_t> calculate_strides(const std::vector<size_t>& tensor_shape) {
     }
 
     strides[tensor_shape.size()-1] = 1;
-    for (size_t i = tensor_shape.size()-2; i != SIZE_T_MAX; --i) {
+    for (size_t i = tensor_shape.size()-2; i != SIZE_MAX; --i) {
         strides[i] = strides[i+1] * tensor_shape[i+1];
     }
     return strides;
