@@ -7,23 +7,23 @@ using std::make_shared;
 
 namespace kernels {
 
-std::shared_ptr<TensorImpl> transpose(std::shared_ptr<const TensorImpl> a) {
-    if (a->shape.size() > 2) {
-        throw std::runtime_error("Transpose supported for tensors up to 2 dimensions");
+shared_ptr<TensorImpl> transpose(shared_ptr<const TensorImpl> a, size_t dim0, size_t dim1) {
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(a->storage, a->shape, a->strides, a->requires_grad);
+    if (a->shape.size() < 2 || dim0 == dim1) {
+        return res;
     }
-    if (a->shape.size() == 0) {
-        return make_shared<TensorImpl>(std::vector<float>(), std::vector<size_t>(), a->requires_grad);
+    if (dim0 >= a->shape.size() || dim1 >= a->shape.size()) {
+        throw std::runtime_error("Transpose dim argument larger than tensor dimension");
     }
-    if (a->shape.size() == 1) {
-        return make_shared<TensorImpl>(a->storage->data, std::vector<size_t>({1, a->shape[0]}), std::vector<size_t>({a->shape[0], 1}), a->requires_grad);
-    }
-    std::vector<size_t> new_shape({a->shape[1], a->shape[0]});
-    std::shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, new_shape, a->requires_grad);
-    for (size_t i = 0; i < a->shape[0]; ++i) {
-        for (size_t j = 0; j < a->shape[1]; ++j) {
-            res->storage->data[idx_to_offset({j, i}, res->strides, res->offset)] = a->storage->data[idx_to_offset({i, j}, a->strides, a->offset)];
-        }
+    std::swap(res->shape[dim0], res->shape[dim1]);
+    std::swap(res->strides[dim0], res->strides[dim1]);
+    if (res->grad) {
+        std::swap(res->grad->impl()->shape[dim0], res->grad->impl()->shape[dim1]);
+        std::swap(res->grad->impl()->strides[dim0], res->grad->impl()->strides[dim1]);
     }
     return res;
+}
+shared_ptr<TensorImpl> view(std::shared_ptr<const TensorImpl> a, const std::vector<size_t>& new_shape, const std::vector<size_t>& new_strides, const std::vector<size_t>& offset_idx) {
+    return make_shared<TensorImpl>(a->storage, new_shape, new_strides, idx_to_offset(offset_idx, a->strides, a->offset));
 }
 }

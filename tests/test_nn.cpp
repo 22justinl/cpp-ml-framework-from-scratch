@@ -14,7 +14,6 @@ TEST_CASE("Test MLP 1") {
             });
     SGD optimizer(m.parameters());
     nn::MSELoss loss;
-
     Tensor x1({-1, 1, 0.5}, {1, 3});
     Tensor pred = m.forward(x1);
     Tensor y1({-1,1,2,-2}, {1,4});

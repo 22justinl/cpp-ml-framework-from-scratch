@@ -169,27 +169,29 @@ shared_ptr<TensorImpl> log(shared_ptr<const TensorImpl> a) {
 }
 
 // TODO: replace later with reshaping?
-shared_ptr<TensorImpl> col_to_vec(shared_ptr<TensorImpl> a) {
+shared_ptr<TensorImpl> col_to_vec(shared_ptr<const TensorImpl> a) {
     if (a->shape.size() != 2 || a->shape[1] != 1) {
         throw std::runtime_error("Only 2D column Tensors can be converted to 1D Tensor");
     }
-    a->shape = {a->shape[0]};
-    a->strides = calculate_strides(a->shape);
-    if (a->grad) {
-        a->grad->impl()->shape = a->shape;
-        a->grad->impl()->strides = a->strides;
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(a->storage, a->shape, a->strides, a->requires_grad);
+    res->shape = {res->shape[0]};
+    res->strides = calculate_strides(res->shape);
+    if (res->grad) {
+        res->grad->impl()->shape = res->shape;
+        res->grad->impl()->strides = res->strides;
     }
-    return a;
+    return res;
 }
-shared_ptr<TensorImpl> vec_to_col(shared_ptr<TensorImpl> a) {
+shared_ptr<TensorImpl> vec_to_col(shared_ptr<const TensorImpl> a) {
     if (a->shape.size() != 1) {
         throw std::runtime_error("Only 1D Tensors can be converted to column Tensor");
     }
-    a->shape = {a->shape[0], 1};
-    a->strides = calculate_strides(a->shape);
-    if (a->grad) {
-        a->grad->impl()->shape = a->shape;
-        a->grad->impl()->strides = a->strides;
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(a->storage, a->shape, a->strides, a->requires_grad);
+    res->shape = {res->shape[0], 1};
+    res->strides = calculate_strides(res->shape);
+    if (res->grad) {
+        res->grad->impl()->shape = res->shape;
+        res->grad->impl()->strides = res->strides;
     }
-    return a;
+    return res;
 }

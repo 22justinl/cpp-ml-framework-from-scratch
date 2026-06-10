@@ -36,9 +36,6 @@ Tensor matvec(const Tensor& t1, const Tensor& t2) {
 Tensor dot(const Tensor& t1, const Tensor& t2) {
     return binop_helper<DotOp>(t1, t2);
 }
-Tensor transpose(const Tensor& t1) {
-    return monop_helper<TransposeOp>(t1);
-}
 Tensor power(const Tensor& t1, float f) {
     Tensor t2 = PowerOp::forward(t1, f);
     if (t1.requires_grad()) {

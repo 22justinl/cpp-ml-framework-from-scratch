@@ -3,6 +3,7 @@
 #include "kernels/tensor_ops.h"
 #include "core/broadcast.h"
 #include "utils/tensor_utils.h"
+#include <iostream>
 
 AddOp::AddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     a = t1.impl();
@@ -135,10 +136,10 @@ Tensor MatMulOp::forward(const Tensor& t1, const Tensor& t2) {
 }
 void MatMulOp::backward() {
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b)));
+        kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b, 0, 1)));
     }
     if (b->requires_grad) {
-        kernels::add_inplace(b->grad->impl(), kernels::matmul(kernels::transpose(a), out->grad->impl()));
+        kernels::add_inplace(b->grad->impl(), kernels::matmul(kernels::transpose(a, 0, 1), out->grad->impl()));
     }
 }
 std::vector<std::shared_ptr<const TensorImpl>> MatMulOp::inputs() {
@@ -155,10 +156,10 @@ Tensor MatVecOp::forward(const Tensor& t1, const Tensor& t2) {
 }
 void MatVecOp::backward() {
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b)));
+        kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(vec_to_col(b), 0, 1)));
     }
     if (b->requires_grad) {
-        kernels::add_inplace(b->grad->impl(), col_to_vec(kernels::matmul(kernels::transpose(a), out->grad->impl())));
+        kernels::add_inplace(b->grad->impl(), col_to_vec(kernels::matmul(kernels::transpose(a, 0, 1), out->grad->impl())));
     }
 }
 std::vector<std::shared_ptr<const TensorImpl>> MatVecOp::inputs() {
@@ -183,22 +184,6 @@ void DotOp::backward() {
 }
 std::vector<std::shared_ptr<const TensorImpl>> DotOp::inputs() {
     return {a, b};
-}
-
-TransposeOp::TransposeOp(const Tensor& t1, const Tensor& t2) {
-    a = t1.impl();
-    out = t2.impl();
-}
-Tensor TransposeOp::forward(const Tensor& t1) {
-    return Tensor(kernels::transpose(t1.impl()));
-}
-void TransposeOp::backward() {
-    if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), kernels::transpose(out->grad->impl()));
-    }
-}
-std::vector<std::shared_ptr<const TensorImpl>> TransposeOp::inputs() {
-    return {a};
 }
 
 PowerOp::PowerOp(const Tensor& t1, float x, const Tensor& t2): x(x) {

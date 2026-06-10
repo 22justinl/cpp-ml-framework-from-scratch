@@ -1,5 +1,6 @@
 #include "linear.h"
 #include "ops/math_ops.h"
+#include "ops/tensor_ops.h"
 #include "utils/nn_utils.h"
 
 namespace nn {
@@ -17,6 +18,6 @@ Linear::Linear(size_t in_features, size_t out_features, bool bias, std::string n
 }
 
 Tensor Linear::forward(Tensor x) {
-    return matmul(x, transpose(weight_.tensor))+bias_.tensor;
+    return matmul(x, transpose(weight_.tensor, 0, 1))+bias_.tensor;
 }
 }

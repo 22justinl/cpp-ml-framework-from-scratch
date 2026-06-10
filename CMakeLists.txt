@@ -13,6 +13,7 @@ add_library(cpp_ml_from_scratch
     src/autograd/math_ops.cpp
     src/autograd/reduction_ops.cpp
     src/autograd/activation.cpp
+    src/autograd/tensor_ops.cpp
 
     src/kernels/math_ops.cpp
     src/kernels/reduction_ops.cpp
@@ -23,6 +24,7 @@ add_library(cpp_ml_from_scratch
     src/ops/reduction_ops.cpp
     src/ops/activation.cpp
     src/ops/loss.cpp
+    src/ops/tensor_ops.cpp
 
     src/nn/module.cpp
     src/nn/parameter.cpp
@@ -59,6 +61,9 @@ add_executable(tests
 
     tests/test_loss.cpp
     tests/test_loss_autograd.cpp
+
+    tests/test_tensor_ops.cpp
+    tests/test_tensor_ops_autograd.cpp
 
     tests/test_nn.cpp
 )

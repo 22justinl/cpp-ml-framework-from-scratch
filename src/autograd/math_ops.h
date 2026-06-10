@@ -112,18 +112,6 @@ private:
     std::shared_ptr<const TensorImpl> out;
 };
 
-class TransposeOp: public Operator {
-public:
-    TransposeOp(const Tensor& t1, const Tensor& t2);
-    static Tensor forward(const Tensor& t1);
-
-    void backward() override;
-    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
-private:
-    std::shared_ptr<const TensorImpl> a;
-    std::shared_ptr<const TensorImpl> out;
-};
-
 class PowerOp: public Operator {
 public:
     PowerOp(const Tensor& t1, float x, const Tensor& t2);

@@ -1,19 +1,28 @@
 #include "doctest.h"
 
-#include "ops/reduction_ops.h"
-#include "utils/tensor_utils.h"
+#include "nn/activation.h"
+#include "nn/linear.h"
+#include "nn/loss.h"
+#include "nn/sequential.h"
+#include "optim/sgd.h"
+#include <iostream>
 
-TEST_CASE("Curr test") {
-    Tensor t1({
-            0,1,2,3,
-            4,5,6,7,
-
-            8,9,10,11,
-            12,13,14,15,
-
-            16,17,18,19,
-            20,21,22,23}, {3,2,4});
-    print_tensor(max(t1,0));
-    print_tensor(max(t1,1));
-    print_tensor(max(t1,2));
+TEST_CASE("Test MLP 1") {
+    nn::Sequential m({
+            std::make_shared<nn::Linear>(3,10),
+            std::make_shared<nn::ReLU>(),
+            std::make_shared<nn::Linear>(10, 4)
+            });
+    SGD optimizer(m.parameters());
+    nn::MSELoss loss;
+    Tensor x1({-1, 1, 0.5}, {1, 3});
+    Tensor pred = m.forward(x1);
+    Tensor y1({-1,1,2,-2}, {1,4});
+    Tensor res1 = loss.forward(pred, y1);
+    optimizer.zero_grad();
+    res1.backward();
+    optimizer.step();
+    pred = m.forward(x1);
+    Tensor res2 = loss.forward(pred, y1);
+    CHECK(res1({0}) > res2({0}));
 }
