@@ -112,9 +112,116 @@ TEST_CASE("Tensor unsqueeze") {
 }
 
 TEST_CASE("Tensor reshape (valid view: no copy)") {
+    Tensor t1({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}, {2,3,4});
+    Tensor res1 = reshape(t1, {4,2,3});
+    Tensor res2 = reshape(t1, {2,2,2,3});
+    Tensor res3 = reshape(t1, {2,1,2,3,2});
+    Tensor res4 = reshape(t1, {3,8});
+    CHECK(check_tensor_equal(res1, Tensor({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}, {4,2,3})));
+    CHECK(check_tensor_equal(res2, Tensor({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}, {2,2,2,3})));
+    CHECK(check_tensor_equal(res3, Tensor({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}, {2,1,2,3,2})));
+    CHECK(check_tensor_equal(res4, Tensor({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}, {3,8})));
+    CHECK(t1.impl()->storage == res1.impl()->storage);
+    CHECK(t1.impl()->storage == res2.impl()->storage);
+    CHECK(t1.impl()->storage == res3.impl()->storage);
+    CHECK(t1.impl()->storage == res4.impl()->storage);
 
+    // non-contiguous tensors
+    Tensor t2({
+            1,2,3,
+            4,5,6,
+            7,8,9,
+            10,11,12,
+
+            13,14,15,
+            16,17,18,
+            19,20,21,
+            22,23,24,
+
+            25,26,27,
+            28,29,30,
+            31,32,33,
+            34,35,36,
+
+
+            37,38,39,
+            40,41,42,
+            43,44,45,
+            46,47,48,
+
+            49,50,51,
+            52,53,54,
+            55,56,57,
+            58,59,60,
+
+            61,62,63,
+            64,65,66,
+            67,68,69,
+            70,71,72},{2,3,4,3});
+    Tensor t3 = transpose(t2, 2, 3);
+    std::vector<float> expected_data{
+        1,  4,  7, 10,  2,  5,  8, 11,  3,  6,  9, 12, 13, 16, 19, 22, 14, 17,
+        20, 23, 15, 18, 21, 24, 25, 28, 31, 34, 26, 29, 32, 35, 27, 30, 33, 36,
+        37, 40, 43, 46, 38, 41, 44, 47, 39, 42, 45, 48, 49, 52, 55, 58, 50, 53,
+        56, 59, 51, 54, 57, 60, 61, 64, 67, 70, 62, 65, 68, 71, 63, 66, 69, 72
+    };
+    Tensor res5 = reshape(t3, {6,3,4});
+    Tensor res6 = reshape(t3, {2,3,3,1,4});
+    Tensor res7 = reshape(t3, {6,3,2,2});
+    CHECK(check_tensor_equal(res5, Tensor(expected_data, {6,3,4})));
+    CHECK(check_tensor_equal(res6, Tensor(expected_data, {2,3,3,1,4})));
+    CHECK(check_tensor_equal(res7, Tensor(expected_data, {6,3,2,2})));
+    CHECK(t3.impl()->storage == res5.impl()->storage);
+    CHECK(t3.impl()->storage == res6.impl()->storage);
+    CHECK(t3.impl()->storage == res7.impl()->storage);
 }
 
 TEST_CASE("Tensor reshape (invalid view: copy)") {
+    Tensor t1({
+            1,2,3,
+            4,5,6,
+            7,8,9,
+            10,11,12,
 
+            13,14,15,
+            16,17,18,
+            19,20,21,
+            22,23,24,
+
+            25,26,27,
+            28,29,30,
+            31,32,33,
+            34,35,36,
+
+
+            37,38,39,
+            40,41,42,
+            43,44,45,
+            46,47,48,
+
+            49,50,51,
+            52,53,54,
+            55,56,57,
+            58,59,60,
+
+            61,62,63,
+            64,65,66,
+            67,68,69,
+            70,71,72},{2,3,4,3});
+    Tensor t2 = transpose(t1, 2, 3);
+    std::vector<float> expected_data{
+        1,  4,  7, 10,  2,  5,  8, 11,  3,  6,  9, 12, 13, 16, 19, 22, 14, 17,
+        20, 23, 15, 18, 21, 24, 25, 28, 31, 34, 26, 29, 32, 35, 27, 30, 33, 36,
+        37, 40, 43, 46, 38, 41, 44, 47, 39, 42, 45, 48, 49, 52, 55, 58, 50, 53,
+        56, 59, 51, 54, 57, 60, 61, 64, 67, 70, 62, 65, 68, 71, 63, 66, 69, 72
+    };
+    Tensor res1 = reshape(t2, {4,3,2,3});
+    Tensor res2 = reshape(t2, {72});
+    Tensor res3 = reshape(t2, {2,1,2,9,2});
+    CHECK(check_tensor_equal(res1, Tensor(expected_data, {4,3,2,3})));
+    CHECK(check_tensor_equal(res2, Tensor(expected_data, {72})));
+    CHECK(check_tensor_equal(res3, Tensor(expected_data, {2,1,2,9,2})));
+    CHECK(t2.impl()->storage != res1.impl()->storage);
+    CHECK(t2.impl()->storage != res2.impl()->storage);
+    CHECK(t2.impl()->storage != res3.impl()->storage);
 }

@@ -91,6 +91,7 @@ struct TensorImpl {
     TensorImpl(float val, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad);
     // View
     TensorImpl(std::shared_ptr<TensorData> storage, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad);
+    TensorImpl(std::shared_ptr<TensorData> storage, std::vector<size_t> shape, std::vector<size_t> strides, size_t offset, bool requires_grad);
 
     std::shared_ptr<TensorData> storage;
     std::vector<size_t> shape;

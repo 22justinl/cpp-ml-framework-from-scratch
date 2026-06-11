@@ -20,6 +20,8 @@ TensorImpl::TensorImpl(std::vector<float> data, std::vector<size_t> shape, std::
     storage = std::make_shared<TensorData>(data);
     if (requires_grad) {
         grad = std::make_unique<Tensor>(0.f, shape);
+        grad->impl()->strides = strides;
+        grad->impl()->offset = offset;
     }
 }
 // New tensor with new shape (filled)
@@ -30,14 +32,20 @@ TensorImpl::TensorImpl(float val, std::vector<size_t> shape, std::vector<size_t>
     storage = std::make_shared<TensorData>(std::vector<float>(n_el, val));
     if (requires_grad) {
         grad = std::make_unique<Tensor>(0.f, shape);
+        grad->impl()->strides = strides;
+        grad->impl()->offset = offset;
     }
 }
 
 // View
-TensorImpl::TensorImpl(std::shared_ptr<TensorData> storage, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad): storage(storage), shape(shape), strides(strides), requires_grad(requires_grad) {
+TensorImpl::TensorImpl(std::shared_ptr<TensorData> storage, std::vector<size_t> shape, std::vector<size_t> strides, bool requires_grad): TensorImpl(storage, shape, strides, 0, requires_grad) {}
+TensorImpl::TensorImpl(std::shared_ptr<TensorData> storage, std::vector<size_t> shape, std::vector<size_t> strides, size_t offset, bool requires_grad): 
+    storage(storage), shape(shape), strides(strides), offset(offset), requires_grad(requires_grad) {
     n_el = calculate_n_el(shape);
     if (requires_grad) {
         grad = std::make_unique<Tensor>(0.f, shape);
+        grad->impl()->strides = strides;
+        grad->impl()->offset = offset;
     }
 }
 

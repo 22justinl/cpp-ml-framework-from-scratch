@@ -51,36 +51,33 @@ std::shared_ptr<TensorImpl> reshape(std::shared_ptr<const TensorImpl> a, const s
         return make_shared<TensorImpl>(a->storage, a->shape, a->strides, a->requires_grad);
     }
 
-    // 1. find groups -> array "groups" of start and end indices of groups (start inclusive, end exclusive)
-    // 2. iterate through new shape starting from the right, group dims together, calculating n_el as we go
-    //      if n_el < n_el of current group in "groups": continue
-    //      if n_el > n_el of current group in "groups": invalid, need to copy for reshape
-    //      if n_el = n_el of current group in "groups": valid, start new group, n_el = 1
-    //          (how to deal with dimensions with size 1?)
-
     // find "contiguous groups" (shape[dim] and shape[dim+1] in contiguous group if strides[dim]=strides[dim+1]*shape[dim+1])
     size_t group_count = 1;                                 // only need n_el of groups
     std::vector<size_t> group_n_el{a->shape[0]};
-    for (size_t d = 0; d < a->shape.size(); ++d) {
+    std::vector<size_t> group_last_stride{};
+    for (size_t d = 0; d < a->shape.size()-1; ++d) {
         if (a->strides[d] == a->strides[d+1] * a->shape[d+1]) {
             group_n_el[group_count-1] *= a->shape[d+1];     // update group
         } else {
+            group_last_stride.push_back(a->strides[d]);
             ++group_count;                                  // new group found
             group_n_el.push_back(a->shape[d+1]);            // create new group
         }
     }
+    group_last_stride.push_back(a->strides[a->shape.size()-1]);
 
-    // check if reshape possible without copying
-    // FIX: need to calculate strides within groups
-    //      can calculate as we go if we iterate starting from the right?
+    // check if reshape possible without copying, calculate strides for each group
     bool valid_view = true;
-    size_t dim = 0;
+    size_t dim = new_shape.size();
     std::vector<size_t> new_strides(new_shape.size(), 0);
-    for (size_t g = 0; g < group_count && dim < new_shape.size(); ++g) {
+    for (size_t g = group_count; g-- && dim != 0;) {
+        --dim;
         size_t n_el = new_shape[dim];
-        while (dim < new_shape.size() && n_el * new_shape[dim+1] <= group_n_el[g]) {
-            n_el *= new_shape[dim+1];
-            ++dim;
+        new_strides[dim] = group_last_stride[g];
+        while (dim != 0 && n_el * new_shape[dim-1] <= group_n_el[g]) {
+            new_strides[dim-1] = new_strides[dim] * new_shape[dim];
+            n_el *= new_shape[dim-1];
+            --dim;
         }
         if (n_el != group_n_el[g]) {
             // current group n_el incompatible with contiguous group g
@@ -88,14 +85,14 @@ std::shared_ptr<TensorImpl> reshape(std::shared_ptr<const TensorImpl> a, const s
             break;
         }
     }
-    if (dim < new_shape.size()) {
+    if (dim != 0) {
         // new_shape didn't fit into groups
         valid_view = false;
     }
 
     if (valid_view) {
-        return make_shared<TensorImpl>(a->storage, new_shape, calculate_strides(new_shape), a->requires_grad);
-        // return make_shared<TensorImpl>(a->storage, new_shape, new_strides, a->requires_grad);
+        // return make_shared<TensorImpl>(a->storage, new_shape, calculate_strides(new_shape), a->requires_grad);
+        return make_shared<TensorImpl>(a->storage, new_shape, new_strides, a->offset, a->requires_grad);
     }
     // invalid view, copy and reshape
     // copy to "contiguous" tensor
@@ -108,9 +105,9 @@ std::shared_ptr<TensorImpl> reshape(std::shared_ptr<const TensorImpl> a, const s
     // reshape
     res->shape = new_shape;
     res->strides = calculate_strides(new_shape);
-    if (a->grad) {
-        a->grad->impl()->shape = res->shape;
-        a->grad->impl()->strides = res->strides;
+    if (res->grad) {
+        res->grad->impl()->shape = res->shape;
+        res->grad->impl()->strides = res->strides;
     }
 
     return res;
