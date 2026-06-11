@@ -16,3 +16,41 @@ private:
     size_t dim1;
     std::shared_ptr<const TensorImpl> out;
 };
+
+class SqueezeOp: public Operator {
+public:
+    SqueezeOp(const Tensor& t1, size_t dim, const Tensor& t2);
+    static Tensor forward(const Tensor& t1, size_t dim);
+
+    void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    size_t dim;
+    std::shared_ptr<const TensorImpl> out;
+};
+
+class UnsqueezeOp: public Operator {
+public:
+    UnsqueezeOp(const Tensor& t1, size_t dim, const Tensor& t2);
+    static Tensor forward(const Tensor& t1, size_t dim);
+
+    void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    size_t dim;
+    std::shared_ptr<const TensorImpl> out;
+};
+
+class ReshapeOp: public Operator {
+public:
+    ReshapeOp(const Tensor& t1, const Tensor& t2);
+    static Tensor forward(const Tensor& t1, const std::vector<size_t>& new_shape);
+
+    void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> out;
+};

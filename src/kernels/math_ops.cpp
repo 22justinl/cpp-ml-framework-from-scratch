@@ -130,17 +130,6 @@ shared_ptr<TensorImpl> dot(shared_ptr<const TensorImpl> a, shared_ptr<const Tens
         }
         return res;
     }
-    // NOTE: PyTorch only supports dot product of 1D tensors, using same behavior here
-    // // a and b 2D tensors
-    // if (    (t1_shape.size() == 2 && t2_shape.size() == 2) &&
-    //         ((t1_shape[0] == 1 && t2_shape[0] == 1 && t1_shape[1] == t2_shape[1]) ||
-    //          (t1_shape[1] == 1 && t2_shape[1] == 1 && t1_shape[0] == t2_shape[0]))
-    //     ) {
-    //     for (size_t i = 0; i < a_data.size(); ++i) {
-    //         res_data += a_data[i] * b_data[i];
-    //     }
-    //     return res;
-    // }
     throw std::runtime_error("Cannot dot product tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
 }
 
