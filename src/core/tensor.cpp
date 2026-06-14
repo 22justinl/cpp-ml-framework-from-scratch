@@ -239,5 +239,9 @@ void Tensor::build_topo(std::shared_ptr<const TensorImpl> node, std::vector<std:
     topo.push_back(node);
 }
 
+void Tensor::print() const {
+    print_tensor(*this);
+}
+
 // Private functions
 
