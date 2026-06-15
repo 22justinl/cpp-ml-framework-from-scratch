@@ -66,3 +66,20 @@ void ReshapeOp::backward() {
 std::vector<std::shared_ptr<const TensorImpl>> ReshapeOp::inputs() {
     return {a};
 }
+
+SliceOp::SliceOp(const Tensor& t1, const std::vector<TensorIndex>& indices, const Tensor& t2): indices(indices) {
+    a = t1.impl();
+    out = t2.impl();
+}
+Tensor SliceOp::forward(const Tensor& t1, const std::vector<TensorIndex>& indices) {
+    return kernels::slice(t1.impl(), indices);
+}
+
+void SliceOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(kernels::slice(a->grad->impl(), indices), out->grad->impl());
+    }
+}
+std::vector<std::shared_ptr<const TensorImpl>> SliceOp::inputs() {
+    return {a};
+}

@@ -8,6 +8,7 @@
 
 struct TensorImpl;
 struct TensorData;
+struct TensorIndex;
 
 class Operator;
 
@@ -27,6 +28,10 @@ public:
     float& operator()(const std::vector<size_t>& indices);
     float operator()(const std::initializer_list<size_t> indices) const;
     float operator()(const std::vector<size_t>& indices) const;
+
+    Tensor operator()(const std::initializer_list<TensorIndex>& indices) const;
+    Tensor operator()(const std::vector<TensorIndex>& indices) const;
+
     Tensor operator+(const Tensor& other) const;
     Tensor operator-(const Tensor& other) const;
     Tensor operator*(const Tensor& other) const;
@@ -108,6 +113,27 @@ struct TensorImpl {
 struct TensorData {
     TensorData(std::vector<float> data);
     std::vector<float> data;
+};
+
+struct Slice {
+    size_t start;
+    size_t end;
+    size_t step = 1;
+};
+
+struct TensorIndex {
+    enum class Type {
+        Index,
+        Slice
+    };
+
+    TensorIndex(size_t index);
+    TensorIndex(Slice slice);
+
+    Type type;
+    size_t index;
+    Slice slice;
+
 };
 
 Tensor operator*(float f, const Tensor& t);

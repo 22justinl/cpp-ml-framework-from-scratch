@@ -225,3 +225,23 @@ TEST_CASE("Tensor reshape (invalid view: copy)") {
     CHECK(t2.impl()->storage != res2.impl()->storage);
     CHECK(t2.impl()->storage != res3.impl()->storage);
 }
+
+TEST_CASE("Tensor slice") {
+    Tensor t1({
+            1,2,3,4,
+            5,6,7,8,
+            9,10,11,12,
+
+            13,14,15,16,
+            17,18,19,20,
+            21,22,23,24}, {2,3,4});
+
+    Tensor res1 = t1(std::vector<TensorIndex>{0, 0, 0});
+    Tensor res2 = t1(std::vector<TensorIndex>{1, 1, 2});
+    Tensor res3 = t1(std::vector<TensorIndex>{0, 1});
+    Tensor res4 = t1(std::vector<TensorIndex>{1, Slice(0, 2), Slice(0,4,2)});
+    CHECK(check_tensor_equal(res1, Tensor(1, {1})));
+    CHECK(check_tensor_equal(res2, Tensor(19, {1})));
+    CHECK(check_tensor_equal(res3, Tensor({5,6,7,8}, {4})));
+    CHECK(check_tensor_equal(res4, Tensor({13,15,17,19}, {2,2})));
+}

@@ -54,3 +54,16 @@ private:
     std::shared_ptr<const TensorImpl> a;
     std::shared_ptr<const TensorImpl> out;
 };
+
+class SliceOp: public Operator {
+public:
+    SliceOp(const Tensor& t1, const std::vector<TensorIndex>& indices, const Tensor& t2);
+    static Tensor forward(const Tensor& t1, const std::vector<TensorIndex>& indices);
+
+    void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    const std::vector<TensorIndex> indices;
+    std::shared_ptr<const TensorImpl> out;
+};

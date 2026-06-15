@@ -7,6 +7,7 @@
 #include "kernels/math_ops.h"
 #include "ops/math_ops.h"
 #include "autograd/operator.h"
+#include "ops/tensor_ops.h"
 #include "utils/tensor_utils.h"
 
 // New tensor with new shape
@@ -51,6 +52,9 @@ TensorImpl::TensorImpl(std::shared_ptr<TensorData> storage, std::vector<size_t> 
 
 TensorData::TensorData(std::vector<float> data): data(data) {}
 
+TensorIndex::TensorIndex(size_t index): index(index), type(Type::Index) {}
+TensorIndex::TensorIndex(Slice slice): slice(slice), type(Type::Slice) {}
+
 Tensor::Tensor() {
     impl_ = std::make_shared<TensorImpl>(std::vector<float>(0, 0), std::vector<size_t>(0, 0), false);
 }
@@ -84,6 +88,14 @@ float Tensor::operator()(const std::initializer_list<size_t> indices) const {
 float Tensor::operator()(const std::vector<size_t>& indices) const {
     return at(indices);
 }
+
+Tensor Tensor::operator()(const std::initializer_list<TensorIndex>& indices) const {
+    return slice(*this, indices);
+}
+Tensor Tensor::operator()(const std::vector<TensorIndex>& indices) const {
+    return slice(*this, indices);
+}
+
 Tensor Tensor::operator+(const Tensor& other) const {
     return add(*this, other);
 }
@@ -244,4 +256,3 @@ void Tensor::print() const {
 }
 
 // Private functions
-

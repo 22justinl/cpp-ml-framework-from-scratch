@@ -68,3 +68,63 @@ TEST_CASE("Tensor reshape (invalid view: copy) (autograd)") {
     res1.backward(Tensor({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}, {3,4,2}));
     CHECK(check_tensor_equal(t1.grad(), transpose(reshape(Tensor({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24}, {3,4,2}), {3,2,4}), 0, 1)));
 }
+
+TEST_CASE("Tensor slice (autograd)") {
+    Tensor t1({
+            1,2,3,4,
+            5,6,7,8,
+            9,10,11,12,
+
+            13,14,15,16,
+            17,18,19,20,
+            21,22,23,24}, {2,3,4}, true);
+
+    Tensor res1 = t1(std::vector<TensorIndex>{0, 0, 0});
+    t1.zero_grad();
+    res1.backward(Tensor({2}, {1}));
+    CHECK(check_tensor_equal(t1.grad(), Tensor({
+            2,0,0,0,
+            0,0,0,0,
+            0,0,0,0,
+
+            0,0,0,0,
+            0,0,0,0,
+            0,0,0,0,
+            }, {2,3,4})));
+    Tensor res2 = t1(std::vector<TensorIndex>{1, 1, 2});
+    t1.zero_grad();
+    res2.backward(Tensor({2}, {1}));
+    CHECK(check_tensor_equal(t1.grad(), Tensor({
+            0,0,0,0,
+            0,0,0,0,
+            0,0,0,0,
+
+            0,0,0,0,
+            0,0,2,0,
+            0,0,0,0,
+            }, {2,3,4})));
+    Tensor res3 = t1(std::vector<TensorIndex>{0, 1});
+    t1.zero_grad();
+    res3.backward(Tensor({1,2,3,4}, {4}));
+    CHECK(check_tensor_equal(t1.grad(), Tensor({
+            0,0,0,0,
+            1,2,3,4,
+            0,0,0,0,
+
+            0,0,0,0,
+            0,0,0,0,
+            0,0,0,0,
+            }, {2,3,4})));
+    Tensor res4 = t1(std::vector<TensorIndex>{1, Slice(0, 2), Slice(0,4,2)});
+    t1.zero_grad();
+    res4.backward(Tensor({1,2,3,4}, {2,2}));
+    CHECK(check_tensor_equal(t1.grad(), Tensor({
+            0,0,0,0,
+            0,0,0,0,
+            0,0,0,0,
+
+            1,0,2,0,
+            3,0,4,0,
+            0,0,0,0,
+            }, {2,3,4})));
+}

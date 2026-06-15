@@ -112,4 +112,33 @@ std::shared_ptr<TensorImpl> reshape(std::shared_ptr<const TensorImpl> a, const s
 
     return res;
 }
+std::shared_ptr<TensorImpl> slice(std::shared_ptr<const TensorImpl> a, const std::vector<TensorIndex>& indices) {
+    if (indices.size() > a->shape.size()) {
+        throw std::runtime_error("Too many slice indices");
+    }
+    std::vector<size_t> new_shape;
+    std::vector<size_t> new_strides;
+    size_t new_offset = a->offset;
+    for (size_t i = 0; i < a->shape.size(); ++i) {
+        if (i >= indices.size()) {
+            new_shape.push_back(a->shape[i]);
+            new_strides.push_back(a->strides[i]);
+        } else if (indices[i].type == TensorIndex::Type::Index) {
+            new_offset += indices[i].index * a->strides[i];
+        } else if (indices[i].type == TensorIndex::Type::Slice) {
+            if (indices[i].slice.start >= indices[i].slice.end) {
+                throw std::runtime_error("Invalid slice range");
+            }
+            new_offset += indices[i].slice.start * a->strides[i];
+            new_shape.push_back((indices[i].slice.end - indices[i].slice.start)/indices[i].slice.step);
+            new_strides.push_back(indices[i].slice.step * a->strides[i]);
+        }
+    }
+    if (new_shape.size() == 0) {
+        new_shape.push_back(1);
+        new_strides.push_back(1);
+    }
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(a->storage, new_shape, new_strides, new_offset, a->requires_grad);
+    return res;
+}
 }
