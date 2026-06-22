@@ -10,5 +10,6 @@ public:
 private:
     Parameter weight_;
     Parameter bias_;
+    bool bias;
 };
 }

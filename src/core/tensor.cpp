@@ -202,6 +202,9 @@ Tensor Tensor::detach() const {
     // NOTE: creates copy of data, change to avoid copying later?
     return Tensor(impl_->storage->data, impl_->shape);
 }
+Tensor Tensor::copy() const {
+    return Tensor(make_shared<TensorImpl>(impl_->storage->data, impl_->shape, impl_->strides, impl_->requires_grad));
+}
 
 void Tensor::set_grad_fn(std::shared_ptr<Operator> grad_fn) {
     impl_->grad_fn = grad_fn;

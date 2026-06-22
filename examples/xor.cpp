@@ -4,22 +4,21 @@
 #include "nn/activation.h"
 #include "nn/sequential.h"
 #include "optim/sgd.h"
-#include "utils/tensor_utils.h"
+#include "utils/train_utils.h"
+
 #include <iostream>
 
 int main() {
-    Tensor x[] = {
-        Tensor({0,0},{1,2}),
-        Tensor({0,1},{1,2}),
-        Tensor({1,0},{1,2}),
-        Tensor({1,1},{1,2}),
-    };
-    Tensor y[] = {
-        Tensor({0},{1}),
-        Tensor({1},{1}),
-        Tensor({1},{1}),
-        Tensor({0},{1})
-    };
+    Tensor x({
+        0,0,
+        0,1,
+        1,0,
+        1,1}, {4,2});
+    Tensor y({
+        0,
+        1,
+        1,
+        0}, {4,1});
 
     nn::Sequential model({
             std::make_shared<nn::Linear>(2, 4),
@@ -31,29 +30,18 @@ int main() {
     SGD optimizer(model.parameters(), 1e-1);
 
     size_t epochs = 5000;
+    ProgressBar progress_bar(0, epochs);
     std::cout << "Training:" << std::endl;;
     for (size_t epoch = 0; epoch < epochs; ++epoch) {
-        std::cout << "[";
-        float progress = (float(epoch)/float(epochs));
-        size_t count = 70 * progress;
-        for (size_t i = 0; i < 70; ++i) {
-            if (i <= count) {
-                std::cout << "=";
-            } else {
-                std::cout << " ";
-            }
-        }
-        std::cout << "] " << 100*progress << "%\r";
-        std::cout.flush();
+        progress_bar.increment();
         for (size_t i = 0; i < 4; ++i) {
-            Tensor pred = model.forward(x[i]);
-            Tensor loss = loss_fn.forward(pred, y[i]);
+            Tensor pred = model.forward(x(std::vector<TensorIndex>{Slice{i,i+1}}));
+            Tensor loss = loss_fn.forward(pred, y(std::vector<TensorIndex>{Slice{i,i+1}}));
             optimizer.zero_grad();
             loss.backward();
             optimizer.step();
         }
     }
-    std::cout << std::endl;
 
-    print_tensor(model.forward(Tensor({0,0,0,1,1,0,1,1},{4,2})));
+    model.forward(x).print();
 }

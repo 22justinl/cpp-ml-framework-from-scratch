@@ -73,6 +73,7 @@ public:
     void set_impl(std::shared_ptr<TensorImpl> impl);
 
     Tensor detach() const;
+    Tensor copy() const;
 
     void set_grad_fn(std::shared_ptr<Operator> grad_fn);
 

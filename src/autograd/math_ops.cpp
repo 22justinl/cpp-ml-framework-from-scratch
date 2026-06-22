@@ -3,7 +3,6 @@
 #include "kernels/tensor_ops.h"
 #include "core/broadcast.h"
 #include "utils/tensor_utils.h"
-#include <iostream>
 
 AddOp::AddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     a = t1.impl();

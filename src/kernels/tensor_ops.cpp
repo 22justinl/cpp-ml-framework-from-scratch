@@ -12,13 +12,13 @@ shared_ptr<TensorImpl> transpose(shared_ptr<const TensorImpl> a, size_t dim0, si
         throw std::runtime_error("Transpose dim argument larger than tensor dimension");
     }
     if (a->shape.size() < 2 || dim0 == dim1) {
-        return make_shared<TensorImpl>(a->storage, a->shape, a->strides, a->requires_grad);
+        return make_shared<TensorImpl>(a->storage, a->shape, a->strides, a->offset, a->requires_grad);
     }
     std::vector<size_t> new_shape = a->shape;
     std::vector<size_t> new_strides = a->strides;
     std::swap(new_shape[dim0], new_shape[dim1]);
     std::swap(new_strides[dim0], new_strides[dim1]);
-    return make_shared<TensorImpl>(a->storage, new_shape, new_strides, a->requires_grad);
+    return make_shared<TensorImpl>(a->storage, new_shape, new_strides, a->offset, a->requires_grad);
 }
 std::shared_ptr<TensorImpl> squeeze(std::shared_ptr<const TensorImpl> a, size_t dim) {
     if (dim >= a->shape.size()) {
@@ -29,7 +29,7 @@ std::shared_ptr<TensorImpl> squeeze(std::shared_ptr<const TensorImpl> a, size_t 
         std::vector<size_t> new_strides = a->strides;
         new_shape.erase(new_shape.begin()+dim);
         new_strides.erase(new_strides.begin()+dim);
-        return make_shared<TensorImpl>(a->storage, new_shape, new_strides, a->requires_grad);
+        return make_shared<TensorImpl>(a->storage, new_shape, new_strides, a->offset, a->requires_grad);
     }
     return make_shared<TensorImpl>(a->storage, a->shape, a->strides, a->requires_grad);
 }
@@ -41,14 +41,14 @@ std::shared_ptr<TensorImpl> unsqueeze(std::shared_ptr<const TensorImpl> a, size_
     std::vector<size_t> new_strides = a->strides;
     new_shape.insert(new_shape.begin()+dim, 1);
     new_strides.insert(new_strides.begin()+dim, dim < a->shape.size() ? a->strides[dim]*a->shape[dim] : 1);
-    return make_shared<TensorImpl>(a->storage, new_shape, new_strides, a->requires_grad);
+    return make_shared<TensorImpl>(a->storage, new_shape, new_strides, a->offset, a->requires_grad);
 }
 std::shared_ptr<TensorImpl> reshape(std::shared_ptr<const TensorImpl> a, const std::vector<size_t>& new_shape) {
     if (a->n_el != calculate_n_el(new_shape)) {
         throw std::runtime_error("Cannot reshape tensor to shape with different number of elements");
     }
     if (check_shape_match(a->shape, new_shape) || a->shape.size() == 0) {
-        return make_shared<TensorImpl>(a->storage, a->shape, a->strides, a->requires_grad);
+        return make_shared<TensorImpl>(a->storage, a->shape, a->strides, a->offset, a->requires_grad);
     }
 
     // find "contiguous groups" (shape[dim] and shape[dim+1] in contiguous group if strides[dim]=strides[dim+1]*shape[dim+1])

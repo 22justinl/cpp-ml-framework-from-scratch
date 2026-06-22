@@ -4,7 +4,7 @@
 #include "utils/nn_utils.h"
 
 namespace nn {
-Linear::Linear(size_t in_features, size_t out_features, bool bias, std::string name) {
+Linear::Linear(size_t in_features, size_t out_features, bool bias, std::string name): bias(bias) {
     weight_.tensor = Tensor(0.f, {out_features, in_features}, true);
     initialize_tensor_normal(weight_.tensor, 0.f, std::sqrt(1.f/in_features));
     register_parameter(&weight_);
@@ -18,6 +18,9 @@ Linear::Linear(size_t in_features, size_t out_features, bool bias, std::string n
 }
 
 Tensor Linear::forward(Tensor x) {
+    if (!bias) {
+        return matmul(x, transpose(weight_.tensor, 0, 1));
+    }
     return matmul(x, transpose(weight_.tensor, 0, 1))+bias_.tensor;
 }
 }

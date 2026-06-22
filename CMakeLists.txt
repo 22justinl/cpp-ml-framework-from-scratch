@@ -32,9 +32,11 @@ add_library(cpp_ml_from_scratch
     src/nn/sequential.cpp
     src/nn/activation.cpp
     src/nn/loss.cpp
+    src/nn/flatten.cpp
 
     src/utils/tensor_utils.cpp
     src/utils/nn_utils.cpp
+    src/utils/train_utils.cpp
 
     src/optim/optimizer.cpp
     src/optim/sgd.cpp

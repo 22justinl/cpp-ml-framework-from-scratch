@@ -1,6 +1,7 @@
 #include "doctest.h"
 
 #include "core/tensor.h"
+#include "ops/math_ops.h"
 #include "ops/tensor_ops.h"
 #include "utils/tensor_utils.h"
 
@@ -244,4 +245,17 @@ TEST_CASE("Tensor slice") {
     CHECK(check_tensor_equal(res2, Tensor(19, {1})));
     CHECK(check_tensor_equal(res3, Tensor({5,6,7,8}, {4})));
     CHECK(check_tensor_equal(res4, Tensor({13,15,17,19}, {2,2})));
+}
+
+TEST_CASE("Tensor slice+operations") {
+    Tensor t1({
+            1,2,3,4,
+            5,6,7,8,
+            9,10,11,12}, {3,4});
+    Tensor t2({
+            1,2,
+            3,4,
+            5,6}, {3,2});
+    Tensor res1 = matmul(t1(std::vector<TensorIndex>{Slice{1,3}, Slice{1,4}}), t2);
+    Tensor expected1({67,88,103,136}, {2,2});
 }

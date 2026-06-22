@@ -73,6 +73,7 @@ shared_ptr<TensorImpl> scalar_mul(float a, shared_ptr<const TensorImpl> b) {
     }
     return res;
 }
+
 shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     // TODO: broadcasting with matmul (different rules from elementwise operations)
     // TODO: nD matmul
@@ -85,15 +86,23 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
         throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
     }
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({a_shape[0], b_shape[1]}), a->requires_grad || b->requires_grad);
-    for (size_t i = 0; i < a_shape[0]; ++i) {
-        for (size_t j = 0; j < b_shape[1]; ++j) {
-            for (size_t k = 0; k < a_shape[1]; ++k) {
-                res->storage->data[idx_to_offset({i, j}, res->strides, res->offset)] += a->storage->data[idx_to_offset({i, k}, a->strides, a->offset)] * b->storage->data[idx_to_offset({k, j}, b->strides, b->offset)];
-            }
+    std::vector<size_t> idx(2, 0);
+    std::vector<size_t> a_idx(2,0);
+    std::vector<size_t> b_idx(2,0);
+    for (size_t i = 0; i < res->n_el; ++i) {
+        float& m = res->storage->data[idx_to_offset(idx, res->strides, res->offset)];
+        a_idx = {idx[0], 0};
+        b_idx = {0, idx[1]};
+        for (size_t i = 0; i < a_shape[1]; ++i) {
+            m += a->storage->data[idx_to_offset(a_idx, a->strides, a->offset)] * b->storage->data[idx_to_offset(b_idx, b->strides, b->offset)];
+            ++a_idx[1];
+            ++b_idx[0];
         }
+        increment_idx(res, idx);
     }
     return res;
 }
+
 shared_ptr<TensorImpl> matvec(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     std::vector<size_t> t1_shape = a->shape;
     std::vector<size_t> t2_shape = b->shape;

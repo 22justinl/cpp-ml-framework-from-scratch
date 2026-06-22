@@ -18,4 +18,12 @@ Tensor Sigmoid::forward(Tensor x) {
     return sigmoid(x);
 }
 
+Softmax::Softmax(std::string name) {
+    set_name(name);
+}
+
+Tensor Softmax::forward(Tensor x) {
+    return softmax(x);
+}
+
 }
