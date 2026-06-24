@@ -1,5 +1,6 @@
 #include "kernels/reduction_ops.h"
 
+#include "kernels/tensor_ops.h"
 #include "utils/tensor_utils.h"
 
 #include <algorithm>
@@ -11,6 +12,7 @@ namespace kernels {
 shared_ptr<TensorImpl> sum(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     // NOTE: sum using double for better stability (implement more stable algorithm later)
     if (dim == SIZE_MAX || (a->shape.size() < 2 && dim == 0)) {
+        if (dim == SIZE_MAX && keepdim) { throw std::runtime_error("keepdim cannot be true for sum without specified dim"); }
         // sum over all values
         double s = 0;
         for (size_t i = 0; i < a->storage->data.size(); ++i) {
@@ -24,38 +26,46 @@ shared_ptr<TensorImpl> sum(shared_ptr<const TensorImpl> a, size_t dim, bool keep
         throw std::runtime_error("dim argument to sum larger than number of dimensions in tensor");
     }
     std::vector<size_t> new_shape(a->shape);
-    if (keepdim) {
-        new_shape[dim] = 1;
-    } else {
-        new_shape.erase(new_shape.begin()+dim);
-    }
+    std::vector<size_t> iter_shape(a->shape);
+    new_shape[dim] = 1;
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, new_shape, a->requires_grad);
-    std::vector<size_t> out_idx(new_shape.size(), 0);
-    std::vector<size_t> curr_idx;
-    // iterate over each output index
-    for (size_t i = 0; i < res->n_el; ++i) {
+    std::vector<size_t> idx(iter_shape.size(), 0);
+    const std::vector<size_t>& a_shape = a->shape;
+
+    size_t a_offset = a->offset;
+    size_t res_offset = res->offset;
+
+    const std::vector<size_t>& a_strides = a->strides;
+    const std::vector<size_t>& res_strides = res->strides;
+
+    const std::vector<float>& a_data = a->storage->data;
+    std::vector<float>& res_data = res->storage->data;
+
+    const size_t n_el = res->n_el;
+    for (size_t i = 0; i < n_el; ++i) {
         double s = 0;
-        curr_idx = out_idx;
-        if (!keepdim) {
-            // input and output indices have different dims, insert 0 before iterating over dim
-            curr_idx.insert(curr_idx.begin()+dim, 0);
+        size_t a_sum_offset = a_offset;
+        for (size_t j = 0; j < a_shape[dim]; ++j) {
+            s += a_data[a_sum_offset];
+            a_sum_offset += a_strides[dim];
         }
-        // iterate over dim
-        for (size_t j = 0; j < a->shape[dim]; ++j) {
-            curr_idx[dim] = j;
-            s += a->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)];
-        }
-        res->storage->data[idx_to_offset(out_idx, res->strides, res->offset)] = s;
-        increment_idx(res, out_idx);
+        res_data[res_offset] = float(s);
+        increment_offset_unary_op(idx, new_shape, a_offset, a_strides, res_offset, res_strides);
+    }
+
+    if (!keepdim) {
+        res = kernels::squeeze(res, dim);
     }
     return res;
 }
 shared_ptr<TensorImpl> mean(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     // TODO: improve stability
+    if (dim == SIZE_MAX && keepdim) { throw std::runtime_error("keepdim cannot be true for mean without specified dim"); }
     size_t n = dim == SIZE_MAX ? a->storage->data.size() : a->shape[dim];
-    shared_ptr<TensorImpl> res = sum(a, dim);
-    for (size_t i = 0; i < res->storage->data.size(); ++i) {
-        res->storage->data[i] /= n;
+    shared_ptr<TensorImpl> res = sum(a, dim, keepdim);
+    std::vector<float>& res_data = res->storage->data;
+    for (size_t i = 0; i < res_data.size(); ++i) {
+        res_data[i] /= n;
     }
     return res;
 }
@@ -63,71 +73,91 @@ shared_ptr<TensorImpl> mean(shared_ptr<const TensorImpl> a, size_t dim, bool kee
 // nD max
 shared_ptr<TensorImpl> max_nd(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     std::vector<size_t> new_shape(a->shape);
-    if (keepdim) {
-        new_shape[dim] = 1;
-    } else {
-        new_shape.erase(new_shape.begin()+dim);
-    }
+    new_shape[dim] = 1;
+
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, new_shape, a->requires_grad);
-    std::vector<size_t> out_idx(new_shape.size(), 0);
-    std::vector<size_t> curr_idx;
-    // iterate over each output index
-    for (size_t i = 0; i < res->n_el; ++i) {
-        curr_idx = out_idx;
-        if (!keepdim) {
-            // input and output indices have different dims, insert 0 before iterating over dim
-            curr_idx.insert(curr_idx.begin()+dim, 0);
+
+    std::vector<size_t> idx(new_shape.size());
+    const std::vector<size_t>& a_shape = a->shape;
+
+    size_t a_offset = a->offset;
+    size_t res_offset = res->offset;
+
+    const std::vector<size_t>& a_strides = a->strides;
+    const std::vector<size_t>& res_strides = res->strides;
+
+    const std::vector<float>& a_data = a->storage->data;
+    std::vector<float>& res_data = res->storage->data;
+
+    const size_t n_el = res->n_el;
+    for (size_t i = 0; i < n_el; ++i) {
+        float& v = res_data[res_offset];
+        size_t a_max_offset = a_offset;
+        for (size_t j = 0; j < a_shape[dim]; ++j) {
+            v = std::max(v, a_data[a_max_offset]);
+            a_max_offset += a_strides[dim];
         }
-        float& v = res->storage->data[idx_to_offset(out_idx, res->strides, res->offset)];
-        v = a->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)];
-        // iterate over dim
-        for (size_t j = 0; j < a->shape[dim]; ++j) {
-            v = std::max(v, a->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)]);
-        }
-        increment_idx(res, out_idx);
+        increment_offset_unary_op(idx, new_shape, a_offset, a_strides, res_offset, res_strides);
     }
+
+    if (!keepdim) {
+        res = kernels::squeeze(res, dim);
+    }
+
     return res;
 }
 // nD max (store max_pos for gradient calculation)
 shared_ptr<TensorImpl> max_nd_store_pos(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, shared_ptr<TensorImpl>* max_pos_ptr) {
     std::vector<size_t> new_shape(a->shape);
-    if (keepdim) {
-        new_shape[dim] = 1;
-    } else {
-        new_shape.erase(new_shape.begin()+dim);
-    }
-    *max_pos_ptr = std::make_shared<TensorImpl>(0, a->shape, a->strides, false);
-
+    new_shape[dim] = 1;
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, new_shape, a->requires_grad);
-    std::vector<size_t> out_idx(new_shape.size(), 0);
-    std::vector<size_t> curr_idx;
-    for (size_t i = 0; i < res->n_el; ++i) {
-        curr_idx = out_idx;
-        if (!keepdim) {
-            curr_idx.insert(curr_idx.begin()+dim, 0);
-        }
-        float& v = res->storage->data[idx_to_offset(out_idx, res->strides, res->offset)];
-        v = a->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)];
+    shared_ptr<TensorImpl> max_pos = std::make_shared<TensorImpl>(0, a->shape, a->strides, false);
+
+    std::vector<size_t> idx(new_shape.size(), 0);
+    const std::vector<size_t>& a_shape = a->shape;
+
+    size_t a_offset = a->offset;
+    size_t res_offset = res->offset;
+
+    const std::vector<size_t>& a_strides = a->strides;
+    const std::vector<size_t>& res_strides = res->strides;
+
+    const std::vector<float>& a_data = a->storage->data;
+    std::vector<float>& res_data = res->storage->data;
+    std::vector<float>& max_pos_data = max_pos->storage->data;
+
+    const size_t n_el = res->n_el;
+    for (size_t i = 0; i < n_el; ++i) {
+        float curr_val = a_data[a_offset];
+        float& v = res_data[res_offset];
         size_t j_v = 0;
-        for (size_t j = 0; j < a->shape[dim]; ++j) {
-            curr_idx[dim] = j;
-            float curr_v = a->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)];
-            if (curr_v > v) {
-                v = curr_v;
+        v = curr_val;
+
+        size_t a_max_offset = a_offset;
+        for (size_t j = 0; j < a_shape[dim]; ++j) {
+            curr_val = a_data[a_max_offset];
+            if (curr_val > v) {
+                v = curr_val;
                 j_v = j;
             }
+            a_max_offset += a_strides[dim];
         }
-        curr_idx[dim] = j_v;
-        (*max_pos_ptr)->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)] = 1;
-        increment_idx(res, out_idx);
+        max_pos_data[a_offset+j_v*a_strides[dim]] = 1;
+        increment_offset_unary_op(idx, new_shape, a_offset, a_strides, res_offset, res_strides);
     }
+
+    if (!keepdim) {
+        res = kernels::squeeze(res, dim);
+    }
+    *max_pos_ptr = max_pos;
     return res;
 }
 shared_ptr<TensorImpl> max(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, shared_ptr<TensorImpl>* max_pos_ptr) {
     if (dim == SIZE_MAX || (a->shape.size() < 2 && dim == 0)) {
+        if (dim == SIZE_MAX && keepdim) { throw std::runtime_error("keepdim cannot be true for max without specified dim"); }
         // max over all values
         auto it = std::max_element(a->storage->data.begin(), a->storage->data.end());
-        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>((keepdim ? a->shape.size() : 1), 1), a->requires_grad);
+        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>{1}, a->requires_grad);
         if (max_pos_ptr) {
             // Store max positions for gradient calculation
             *max_pos_ptr = std::make_shared<TensorImpl>(0, a->shape, a->strides, false);
@@ -147,71 +177,91 @@ shared_ptr<TensorImpl> max(shared_ptr<const TensorImpl> a, size_t dim, bool keep
 // nD min
 shared_ptr<TensorImpl> min_nd(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim) {
     std::vector<size_t> new_shape(a->shape);
-    if (keepdim) {
-        new_shape[dim] = 1;
-    } else {
-        new_shape.erase(new_shape.begin()+dim);
-    }
+    new_shape[dim] = 1;
+
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, new_shape, a->requires_grad);
-    std::vector<size_t> out_idx(new_shape.size(), 0);
-    std::vector<size_t> curr_idx;
-    // iterate over each output index
-    for (size_t i = 0; i < res->n_el; ++i) {
-        curr_idx = out_idx;
-        if (!keepdim) {
-            // input and output indices have different dims, insert 0 before iterating over dim
-            curr_idx.insert(curr_idx.begin()+dim, 0);
+
+    std::vector<size_t> idx(new_shape.size());
+    const std::vector<size_t>& a_shape = a->shape;
+
+    size_t a_offset = a->offset;
+    size_t res_offset = res->offset;
+
+    const std::vector<size_t>& a_strides = a->strides;
+    const std::vector<size_t>& res_strides = res->strides;
+
+    const std::vector<float>& a_data = a->storage->data;
+    std::vector<float>& res_data = res->storage->data;
+
+    const size_t n_el = res->n_el;
+    for (size_t i = 0; i < n_el; ++i) {
+        float& v = res_data[res_offset];
+        size_t a_min_offset = a_offset;
+        for (size_t j = 0; j < a_shape[dim]; ++j) {
+            v = std::min(v, a_data[a_min_offset]);
+            a_min_offset += a_strides[dim];
         }
-        float& v = res->storage->data[idx_to_offset(out_idx, res->strides, res->offset)];
-        v = a->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)];
-        // iterate over dim
-        for (size_t j = 0; j < a->shape[dim]; ++j) {
-            v = std::min(v, a->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)]);
-        }
-        increment_idx(res, out_idx);
+        increment_offset_unary_op(idx, new_shape, a_offset, a_strides, res_offset, res_strides);
     }
+
+    if (!keepdim) {
+        res = kernels::squeeze(res, dim);
+    }
+
     return res;
 }
 // nD min (store min_pos for gradient calculation)
 shared_ptr<TensorImpl> min_nd_store_pos(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, shared_ptr<TensorImpl>* min_pos_ptr) {
     std::vector<size_t> new_shape(a->shape);
-    if (keepdim) {
-        new_shape[dim] = 1;
-    } else {
-        new_shape.erase(new_shape.begin()+dim);
-    }
-    *min_pos_ptr = std::make_shared<TensorImpl>(0, a->shape, a->strides, false);
-
+    new_shape[dim] = 1;
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, new_shape, a->requires_grad);
-    std::vector<size_t> out_idx(new_shape.size(), 0);
-    std::vector<size_t> curr_idx;
-    for (size_t i = 0; i < res->n_el; ++i) {
-        curr_idx = out_idx;
-        if (!keepdim) {
-            curr_idx.insert(curr_idx.begin()+dim, 0);
-        }
-        float& v = res->storage->data[idx_to_offset(out_idx, res->strides, res->offset)];
-        v = a->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)];
+    shared_ptr<TensorImpl> min_pos = std::make_shared<TensorImpl>(0, a->shape, a->strides, false);
+
+    std::vector<size_t> idx(new_shape.size(), 0);
+    const std::vector<size_t>& a_shape = a->shape;
+
+    size_t a_offset = a->offset;
+    size_t res_offset = res->offset;
+
+    const std::vector<size_t>& a_strides = a->strides;
+    const std::vector<size_t>& res_strides = res->strides;
+
+    const std::vector<float>& a_data = a->storage->data;
+    std::vector<float>& res_data = res->storage->data;
+    std::vector<float>& min_pos_data = min_pos->storage->data;
+
+    const size_t n_el = res->n_el;
+    for (size_t i = 0; i < n_el; ++i) {
+        float curr_val = a_data[a_offset];
+        float& v = res_data[res_offset];
         size_t j_v = 0;
-        for (size_t j = 0; j < a->shape[dim]; ++j) {
-            curr_idx[dim] = j;
-            float curr_v = a->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)];
-            if (curr_v < v) {
-                v = curr_v;
+        v = curr_val;
+
+        size_t a_min_offset = a_offset;
+        for (size_t j = 0; j < a_shape[dim]; ++j) {
+            curr_val = a_data[a_min_offset];
+            if (curr_val < v) {
+                v = curr_val;
                 j_v = j;
             }
+            a_min_offset += a_strides[dim];
         }
-        curr_idx[dim] = j_v;
-        (*min_pos_ptr)->storage->data[idx_to_offset(curr_idx, a->strides, a->offset)] = 1;
-        increment_idx(res, out_idx);
+        min_pos_data[a_offset+j_v*a_strides[dim]] = 1;
+        increment_offset_unary_op(idx, new_shape, a_offset, a_strides, res_offset, res_strides);
     }
+
+    if (!keepdim) {
+        res = kernels::squeeze(res, dim);
+    }
+    *min_pos_ptr = min_pos;
     return res;
 }
 shared_ptr<TensorImpl> min(shared_ptr<const TensorImpl> a, size_t dim, bool keepdim, shared_ptr<TensorImpl>* min_pos_ptr) {
     if (dim == SIZE_MAX || (a->shape.size() < 2 && dim == 0)) {
+        if (dim == SIZE_MAX && keepdim) { throw std::runtime_error("keepdim cannot be true for min without specified dim"); }
         // min over all values
         auto it = std::min_element(a->storage->data.begin(), a->storage->data.end());
-        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>((keepdim ? a->shape.size() : 1), 1), a->requires_grad);
+        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(*it, std::vector<size_t>{1}, a->requires_grad);
         if (min_pos_ptr) {
             // Store min positions for gradient calculation
             *min_pos_ptr = std::make_shared<TensorImpl>(0, a->shape, a->strides, false);

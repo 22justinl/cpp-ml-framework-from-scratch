@@ -163,12 +163,12 @@ Tensor Tensor::operator-() const {
 
 float& Tensor::at(const std::initializer_list<size_t> indices) { return at(std::vector(indices)); }
 float& Tensor::at(const std::vector<size_t> indices) {
-    size_t offset = idx_to_offset_checked(indices, impl_->shape, impl_->strides, impl_->offset);
+    size_t offset = idx_to_offset(indices, impl_->shape, impl_->strides, impl_->offset);
     return impl_->storage->data[offset];
 }
 float Tensor::at(const std::initializer_list<size_t> indices) const { return at(std::vector(indices)); }
 float Tensor::at(const std::vector<size_t> indices) const {
-    size_t offset = idx_to_offset_checked(indices, impl_->shape, impl_->strides, impl_->offset);
+    size_t offset = idx_to_offset(indices, impl_->shape, impl_->strides, impl_->offset);
     return impl_->storage->data[offset];
 }
 

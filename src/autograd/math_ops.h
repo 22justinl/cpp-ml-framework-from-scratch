@@ -84,20 +84,6 @@ private:
     std::shared_ptr<const TensorImpl> out;
 };
 
-// Matrix vector multiplication (m, n)(n) or (m, n)(n, 1)
-class MatVecOp: public Operator {
-public:
-    MatVecOp(const Tensor& t1, const Tensor& t2, const Tensor& t3);
-    static Tensor forward(const Tensor& t1, const Tensor& t2);
-
-    void backward() override;
-    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
-private:
-    std::shared_ptr<const TensorImpl> a;
-    std::shared_ptr<const TensorImpl> b;
-    std::shared_ptr<const TensorImpl> out;
-};
-
 // 1D Tensor/vector dot product
 class DotOp: public Operator {
 public:

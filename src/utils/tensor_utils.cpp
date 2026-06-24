@@ -4,26 +4,28 @@
 #include <iostream>
 #include <vector>
 
-void increment_idx(std::shared_ptr<const TensorImpl> t, std::vector<size_t>& idx) {
-    for (size_t dim = t->shape.size()-1; dim != SIZE_MAX; --dim) {
-        if (idx[dim]+1 < t->shape[dim]) {
-            idx[dim] += 1;
-            return;
-        }
-        idx[dim] = 0;
-    }
-}
-
 bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps) {
     if (!check_shape_match(t1.shape(), t2.shape())) {
         return false;
     }
     std::vector<size_t> idx(t1.shape().size(), 0);
-    for (size_t i = 0; i < t1.impl()->n_el; ++i) {
-        if (std::fabs(t1(idx) - t2(idx)) >= eps) {
+    const std::vector<size_t>& shape = t1.shape();
+
+    size_t a_offset = t1.impl()->offset;
+    size_t b_offset = t2.impl()->offset;
+
+    const std::vector<size_t>& a_strides = t1.impl()->strides;
+    const std::vector<size_t>& b_strides = t2.impl()->strides;
+
+    const std::vector<float>& a_data = t1.impl()->storage->data;
+    const std::vector<float>& b_data = t2.impl()->storage->data;
+
+    const size_t n_el = t1.impl()->n_el;
+    for (size_t i = 0; i < n_el; ++i) {
+        if (std::fabs(a_data[a_offset] - b_data[b_offset]) >= eps) {
             return false;
         }
-        increment_idx(t1.impl(), idx);
+        increment_offset_unary_op(idx, shape, a_offset, a_strides, b_offset, b_strides);
     }
     return true;
 }
@@ -104,14 +106,7 @@ size_t calculate_n_el(const std::vector<size_t>& shape) {
     return n_el;
 }
 
-size_t idx_to_offset(const std::vector<size_t>& idx, const std::vector<size_t>& strides, size_t t_offset) {
-    size_t offset = t_offset;
-    for (size_t i = 0; i < strides.size(); ++i) {
-        offset += idx[i] * strides[i];
-    }
-    return offset;
-}
-size_t idx_to_offset_checked(const std::vector<size_t>& idx, const std::vector<size_t>& shape, const std::vector<size_t>& strides, size_t t_offset) {
+size_t idx_to_offset(const std::vector<size_t>& idx, const std::vector<size_t>& shape, const std::vector<size_t>& strides, size_t t_offset) {
     if (idx.size() != shape.size()) {
         throw std::runtime_error("Index shape mismatch");
     }
@@ -123,4 +118,53 @@ size_t idx_to_offset_checked(const std::vector<size_t>& idx, const std::vector<s
         offset += idx[i] * strides[i];
     }
     return offset;
+}
+
+void increment_offset(std::vector<size_t>& idx, const std::vector<size_t>& shape, size_t& offset, const std::vector<size_t>& strides) {
+    for (size_t dim = shape.size(); dim -- > 0;) {
+        if (idx[dim]+1 < shape[dim]) {
+            idx[dim] += 1;
+            offset += strides[dim];
+            return;
+        }
+        offset -= strides[dim]*(shape[dim]-1);
+        idx[dim] = 0;
+    }
+}
+
+// increment_offset but increment offsets for 2 tensors (input and output of unary operation)
+void increment_offset_unary_op(std::vector<size_t>& idx, const std::vector<size_t>& shape,
+        size_t& a_offset, const std::vector<size_t>& a_strides,
+        size_t& res_offset, const std::vector<size_t>& res_strides) {
+    for (size_t dim = shape.size(); dim -- > 0;) {
+        if (idx[dim]+1 < shape[dim]) {
+            idx[dim] += 1;
+            a_offset += a_strides[dim];
+            res_offset += res_strides[dim];
+            return;
+        }
+        a_offset -= a_strides[dim]*(shape[dim]-1);
+        res_offset -= res_strides[dim]*(shape[dim]-1);
+        idx[dim] = 0;
+    }
+}
+
+// increment_offset but increment offsets for 3 tensors (inputs and output of binary operation)
+void increment_offset_binary_op(std::vector<size_t>& idx, const std::vector<size_t>& shape,
+        size_t& a_offset, const std::vector<size_t>& a_strides,
+        size_t& b_offset, const std::vector<size_t>& b_strides,
+        size_t& res_offset, const std::vector<size_t>& res_strides) {
+    for (size_t dim = shape.size(); dim -- > 0;) {
+        if (idx[dim]+1 < shape[dim]) {
+            idx[dim] += 1;
+            a_offset += a_strides[dim];
+            b_offset += b_strides[dim];
+            res_offset += res_strides[dim];
+            return;
+        }
+        a_offset -= a_strides[dim]*(shape[dim]-1);
+        b_offset -= b_strides[dim]*(shape[dim]-1);
+        res_offset -= res_strides[dim]*(shape[dim]-1);
+        idx[dim] = 0;
+    }
 }

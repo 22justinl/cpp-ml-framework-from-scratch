@@ -3,8 +3,6 @@
 #include "core/tensor.h"
 #include <string>
 
-void increment_idx(std::shared_ptr<const TensorImpl> t, std::vector<size_t>& idx);
-void increment_idx_dim(std::shared_ptr<const TensorImpl> t, std::vector<size_t>& idx, size_t dim);
 bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps = 1e-7);
 bool check_shape_match(const std::vector<size_t> shape1, const std::vector<size_t> shape2);
 
@@ -15,5 +13,14 @@ void print_recursive(const Tensor& t1, const std::vector<size_t>& idx, size_t di
 std::vector<size_t> calculate_strides(const std::vector<size_t>& tensor_shape);
 size_t calculate_n_el(const std::vector<size_t>& shape);
 
-size_t idx_to_offset(const std::vector<size_t>& idx, const std::vector<size_t>& strides, size_t t_offset);
-size_t idx_to_offset_checked(const std::vector<size_t>& idx, const std::vector<size_t>& shape, const std::vector<size_t>& strides, size_t t_offset);
+size_t idx_to_offset(const std::vector<size_t>& idx, const std::vector<size_t>& shape, const std::vector<size_t>& strides, size_t t_offset);
+
+void increment_offset(std::vector<size_t>& idx, const std::vector<size_t>& shape, size_t& offset, const std::vector<size_t>& strides);
+// elementwise ops
+void increment_offset_unary_op(std::vector<size_t>& idx, const std::vector<size_t>& shape,
+        size_t& a_offset, const std::vector<size_t>& a_strides,
+        size_t& res_offset, const std::vector<size_t>& res_strides);
+void increment_offset_binary_op(std::vector<size_t>& idx, const std::vector<size_t>& shape,
+        size_t& a_offset, const std::vector<size_t>& a_strides,
+        size_t& b_offset, const std::vector<size_t>& b_strides,
+        size_t& res_offset, const std::vector<size_t>& res_strides);

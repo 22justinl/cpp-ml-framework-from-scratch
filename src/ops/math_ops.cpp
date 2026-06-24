@@ -29,10 +29,6 @@ Tensor scalar_mul(float f, const Tensor& t1) {
 Tensor matmul(const Tensor& t1, const Tensor& t2) {
     return binop_helper<MatMulOp>(t1, t2);
 }
-// Tensor multiplication (m, n)(n) or (m, n)(n, 1)
-Tensor matvec(const Tensor& t1, const Tensor& t2) {
-    return binop_helper<MatVecOp>(t1, t2);
-}
 Tensor dot(const Tensor& t1, const Tensor& t2) {
     return binop_helper<DotOp>(t1, t2);
 }

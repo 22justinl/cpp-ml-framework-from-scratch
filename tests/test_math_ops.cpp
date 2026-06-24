@@ -101,27 +101,6 @@ TEST_CASE("Tensor matmul (error cases)") {
     CHECK_THROWS(matmul(t3, t1));
 }
 
-TEST_CASE("Tensor matvec") {
-    Tensor t1({0,1,2,3,4,5,6,7,8,9,10,11}, {3, 4});
-    Tensor t2({0,1,2,3}, {4});
-
-    Tensor res1 = matvec(t1, t2);
-    Tensor expected({14,38,62}, {3,1});
-    for (size_t i = 0; i < 3; ++i) {
-        CHECK(res1({i,0}) == expected({i,0}));
-    }
-}
-TEST_CASE("Tensor matvec (error cases)") {
-    Tensor t1({0,1,2,3,4,5,6,7,8,9,10,11}, {3, 4});
-    Tensor t2({0,1,2,3}, {4,1});
-    Tensor t3({0,1,2,3, 4}, {5,1});
-    CHECK_THROWS(matvec(t1, t2));
-    CHECK_THROWS(matvec(t1, t3));
-    CHECK_THROWS(matvec(t2, t2));
-    CHECK_THROWS(matvec(t2, t3));
-    CHECK_THROWS(matvec(t3, t2));
-}
-
 TEST_CASE("Tensor dot") {
     Tensor t1({1,2,3}, {3});
     Tensor t2({-1,-2,3}, {3});

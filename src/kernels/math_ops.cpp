@@ -86,42 +86,32 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
         throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
     }
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({a_shape[0], b_shape[1]}), a->requires_grad || b->requires_grad);
-    std::vector<size_t> idx(2, 0);
-    std::vector<size_t> a_idx(2,0);
-    std::vector<size_t> b_idx(2,0);
-    for (size_t i = 0; i < res->n_el; ++i) {
-        float& m = res->storage->data[idx_to_offset(idx, res->strides, res->offset)];
-        a_idx = {idx[0], 0};
-        b_idx = {0, idx[1]};
-        for (size_t i = 0; i < a_shape[1]; ++i) {
-            m += a->storage->data[idx_to_offset(a_idx, a->strides, a->offset)] * b->storage->data[idx_to_offset(b_idx, b->strides, b->offset)];
-            ++a_idx[1];
-            ++b_idx[0];
+    const size_t inner_dim_size = a_shape[1];
+    const std::vector<size_t>& res_shape = res->shape;
+    std::vector<size_t> idx(res->shape.size(), 0);
+    size_t res_offset = res->offset;
+    const std::vector<size_t>& res_strides = res->strides;
+    std::vector<float>& res_data = res->storage->data;
+
+    const std::vector<size_t>& a_strides = a->strides;
+    const std::vector<float>& a_data = a->storage->data;
+    const std::vector<size_t>& b_strides = b->strides;
+    const std::vector<float>& b_data = b->storage->data;
+
+    const size_t n_el = res->n_el;
+    for (size_t i = 0; i < n_el; ++i) {
+        size_t a_offset = a->offset + idx[0]*a_strides[0];
+        size_t b_offset = b->offset + idx[1]*b_strides[1];
+        for (size_t j = 0; j < inner_dim_size; ++j) {
+            res_data[res_offset] += a_data[a_offset] * b_data[b_offset];
+            a_offset += a_strides[1];
+            b_offset += b_strides[0];
         }
-        increment_idx(res, idx);
+        increment_offset(idx, res_shape, res_offset, res_strides);
     }
     return res;
 }
 
-shared_ptr<TensorImpl> matvec(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
-    std::vector<size_t> t1_shape = a->shape;
-    std::vector<size_t> t2_shape = b->shape;
-    if (t1_shape.size() != 2 || (t2_shape.size() != 1)) {
-        throw std::runtime_error("Matrix vector multiplication expects 2D Tensor with 1D Tensor, instead got " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
-    }
-    if (t1_shape[1] != b->storage->data.size()) {
-        throw std::runtime_error("Cannot matrix multiply tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
-    }
-    shared_ptr res = make_shared<TensorImpl>(0, std::vector<size_t>({t1_shape[0], 1}), a->requires_grad || b->requires_grad);
-    const std::vector<float>& t2_data = b->storage->data;
-    std::vector<float>& res_data = res->storage->data;
-    for (size_t i = 0; i < t1_shape[0]; ++i) {
-        for (size_t j = 0; j < t1_shape[1]; ++j) {
-            res_data[i] += a->storage->data[idx_to_offset({i,j}, a->strides, a->offset)]*t2_data[j];
-        }
-    }
-    return res;
-}
 shared_ptr<TensorImpl> dot(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     std::vector<size_t> t1_shape = a->shape;
     std::vector<size_t> t2_shape = b->shape;

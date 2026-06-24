@@ -145,26 +145,6 @@ std::vector<std::shared_ptr<const TensorImpl>> MatMulOp::inputs() {
     return {a, b};
 }
 
-MatVecOp::MatVecOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
-    a = t1.impl();
-    b = t2.impl();
-    out = t3.impl();
-}
-Tensor MatVecOp::forward(const Tensor& t1, const Tensor& t2) {
-    return Tensor(kernels::matvec(t1.impl(), t2.impl()));
-}
-void MatVecOp::backward() {
-    if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(vec_to_col(b), 0, 1)));
-    }
-    if (b->requires_grad) {
-        kernels::add_inplace(b->grad->impl(), col_to_vec(kernels::matmul(kernels::transpose(a, 0, 1), out->grad->impl())));
-    }
-}
-std::vector<std::shared_ptr<const TensorImpl>> MatVecOp::inputs() {
-    return {a, b};
-}
-
 DotOp::DotOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     a = t1.impl();
     b = t2.impl();

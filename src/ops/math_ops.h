@@ -17,9 +17,6 @@ Tensor scalar_mul(float f, const Tensor& t1);
 // Tensor multiplication: (m, n)(n, l)
 Tensor matmul(const Tensor& t1, const Tensor& t2);
 
-// Tensor multiplication (m, n)(n) or (m, n)(n, 1)
-Tensor matvec(const Tensor& t1, const Tensor& t2);
-
 // (n)(n) or (n,1)(n,1) or (1,n)(1,n)
 Tensor dot(const Tensor& t1, const Tensor& t2);
 
