@@ -76,6 +76,11 @@ Tensor::Tensor(const Tensor& other) {
 }
 Tensor::Tensor(std::shared_ptr<TensorImpl> impl): impl_(impl) {}
 
+Tensor::Tensor(Tensor&& other) {
+    impl_ = other.impl();
+    other.impl() = nullptr;
+}
+
 float& Tensor::operator()(const std::initializer_list<size_t> indices) {
     return at(indices);
 }
@@ -120,6 +125,11 @@ Tensor Tensor::operator/(float f) const {
 }
 Tensor& Tensor::operator=(const Tensor& other) {
     impl_ = other.impl_;
+    return *this;
+}
+Tensor& Tensor::operator=(Tensor&& other) {
+    impl_ = other.impl_;
+    other.impl_ = nullptr;
     return *this;
 }
 Tensor& Tensor::operator+=(const Tensor& other) {

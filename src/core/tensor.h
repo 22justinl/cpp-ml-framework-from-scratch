@@ -23,6 +23,7 @@ public:
     Tensor(const float fill_val, const std::vector<size_t> shape, bool requires_grad=false);
     Tensor(const Tensor& other);
     Tensor(std::shared_ptr<TensorImpl> impl);
+    Tensor(Tensor&& other);
 
     float& operator()(const std::initializer_list<size_t> indices);
     float& operator()(const std::vector<size_t>& indices);
@@ -40,6 +41,7 @@ public:
     Tensor operator/(float f) const;
 
     Tensor& operator=(const Tensor& other);
+    Tensor& operator=(Tensor&& other);
     Tensor& operator+=(const Tensor& other);
     Tensor& operator-=(const Tensor& other);
     Tensor& operator*=(const Tensor& other);

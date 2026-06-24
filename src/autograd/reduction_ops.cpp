@@ -22,7 +22,7 @@ void SumOp::backward() {
         kernels::add_inplace(a->grad->impl(), kernels::scalar_mul(out->grad->data_raw()[0], make_shared<TensorImpl>(1, a->shape, a->strides, false)));
     } else {
         shared_ptr<TensorImpl> grad = make_shared<TensorImpl>(1, a->shape, a->strides, a->requires_grad);
-        shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
+        shared_ptr<TensorImpl> out_grad = out->shape.size() == 1 && dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
         BroadcastInfo b_info = construct_broadcast_info(grad, out_grad);
         grad = kernels::mul_broadcast(grad, out_grad, b_info);
         kernels::add_inplace(a->grad->impl(), grad);
@@ -49,7 +49,7 @@ void MeanOp::backward() {
     } else {
         size_t n = a->shape[dim];
         shared_ptr<TensorImpl> grad = make_shared<TensorImpl>(1.0/n, a->shape, a->strides, false);
-        shared_ptr<TensorImpl> out_grad = dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
+        shared_ptr<TensorImpl> out_grad = out->shape.size() == 1 && dim == 1 ? vec_to_col(out->grad->impl()) : out->grad->impl();
         BroadcastInfo b_info = construct_broadcast_info(grad, out_grad);
         grad = kernels::mul_broadcast(grad, out_grad, b_info);
         kernels::add_inplace(a->grad->impl(), grad);

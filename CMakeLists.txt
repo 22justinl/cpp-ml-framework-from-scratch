@@ -40,6 +40,8 @@ add_library(cpp_ml_from_scratch
 
     src/optim/optimizer.cpp
     src/optim/sgd.cpp
+
+    src/data/data.cpp
 )
 
 target_include_directories(cpp_ml_from_scratch PUBLIC
@@ -94,5 +96,12 @@ add_executable(xor
     examples/xor.cpp
 )
 target_link_libraries(xor PRIVATE
+    cpp_ml_from_scratch
+)
+
+add_executable(mnist_digit_mlp
+    examples/mnist_digit_mlp.cpp
+)
+target_link_libraries(mnist_digit_mlp PRIVATE
     cpp_ml_from_scratch
 )
