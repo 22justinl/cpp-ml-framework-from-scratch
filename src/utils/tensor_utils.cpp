@@ -168,3 +168,17 @@ void increment_offset_binary_op(std::vector<size_t>& idx, const std::vector<size
         idx[dim] = 0;
     }
 }
+
+bool is_contiguous(std::shared_ptr<const TensorImpl> a) {
+    if (a->strides[a->shape.size()-1] != 1) {
+        return false;
+    }
+    size_t expected = 1;
+    for (size_t i = a->shape.size()-1; i-->0;) {
+        expected *= a->shape[i+1];
+        if (a->strides[i] != expected) {
+            return false;
+        }
+    }
+    return true;
+}

@@ -24,3 +24,5 @@ void increment_offset_binary_op(std::vector<size_t>& idx, const std::vector<size
         size_t& a_offset, const std::vector<size_t>& a_strides,
         size_t& b_offset, const std::vector<size_t>& b_strides,
         size_t& res_offset, const std::vector<size_t>& res_strides);
+
+bool is_contiguous(std::shared_ptr<const TensorImpl> a);

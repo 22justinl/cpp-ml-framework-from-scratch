@@ -1,5 +1,6 @@
 #include "kernels/math_ops.h"
 
+#include "kernels/tensor_ops.h"
 #include "utils/tensor_utils.h"
 
 #include <numbers>
@@ -77,38 +78,47 @@ shared_ptr<TensorImpl> scalar_mul(float a, shared_ptr<const TensorImpl> b) {
 shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     // TODO: broadcasting with matmul (different rules from elementwise operations)
     // TODO: nD matmul
-    std::vector<size_t> a_shape = a->shape;
-    std::vector<size_t> b_shape = b->shape;
-    if (a_shape[a_shape.size()-1] != b_shape[0]) {
-        throw std::runtime_error("Cannot matrix multiply tensors with shapes " + shape_to_string(a_shape) + " and " + shape_to_string(b_shape));
-    }
-    if (b_shape.size() != 2 || b_shape.size() != 2) {
+    if (a->shape.size() != 2 || b->shape.size() != 2) {
         throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
     }
-    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({a_shape[0], b_shape[1]}), a->requires_grad || b->requires_grad);
-    const size_t inner_dim_size = a_shape[1];
-    const std::vector<size_t>& res_shape = res->shape;
-    std::vector<size_t> idx(res->shape.size(), 0);
-    size_t res_offset = res->offset;
-    const std::vector<size_t>& res_strides = res->strides;
-    std::vector<float>& res_data = res->storage->data;
-
-    const std::vector<size_t>& a_strides = a->strides;
-    const std::vector<float>& a_data = a->storage->data;
-    const std::vector<size_t>& b_strides = b->strides;
-    const std::vector<float>& b_data = b->storage->data;
-
-    const size_t n_el = res->n_el;
-    for (size_t i = 0; i < n_el; ++i) {
-        size_t a_offset = a->offset + idx[0]*a_strides[0];
-        size_t b_offset = b->offset + idx[1]*b_strides[1];
-        for (size_t j = 0; j < inner_dim_size; ++j) {
-            res_data[res_offset] += a_data[a_offset] * b_data[b_offset];
-            a_offset += a_strides[1];
-            b_offset += b_strides[0];
-        }
-        increment_offset(idx, res_shape, res_offset, res_strides);
+    if (a->shape[a->shape.size()-1] != b->shape[0]) {
+        throw std::runtime_error("Cannot matrix multiply tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
     }
+    shared_ptr<const TensorImpl> a_cont = is_contiguous(a) ? a : kernels::contiguous(a);
+    shared_ptr<const TensorImpl> b_t = kernels::transpose(b, 0, 1);
+    shared_ptr<const TensorImpl> b_t_cont = is_contiguous(b_t) ? b_t : kernels::contiguous(b_t);
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({a->shape[0], b->shape[1]}), a->requires_grad || b->requires_grad);
+
+    std::vector<float>& res_data = res->storage->data;
+    const std::vector<float>& a_data = a_cont->storage->data;
+    const std::vector<float>& b_t_data = b_t_cont->storage->data;
+
+    const std::vector<size_t>& a_shape = a_cont->shape;
+    const std::vector<size_t>& b_t_shape = b_t_cont->shape;
+    const std::vector<size_t>& res_shape = res->shape;
+
+    const size_t M = res_shape[0];
+    const size_t N = res_shape[1];
+    const size_t K = a_cont->shape[1];
+    const size_t B = 16;
+    for (size_t ii = 0; ii < M; ii+=B) {
+        for (size_t jj = 0; jj < N; jj+=B) {
+            for (size_t kk = 0; kk < K; kk+=B) {
+                for (size_t i = ii; i < std::min(ii+B, M); ++i) {
+                    const size_t a_offset = a_cont->offset + i * K;
+                    for (size_t j = jj; j < std::min(jj+B, N); ++j) {
+                        const size_t b_t_offset = b_t_cont->offset + j * K;
+                        float s = 0;
+                        for (size_t k = kk; k < std::min(kk+B, K); ++k) {
+                            s += a_data[a_offset+k]*b_t_data[b_t_offset+k];
+                        }
+                        res_data[i*N+j] += s;
+                    }
+                }
+            }
+        }
+    }
+
     return res;
 }
 

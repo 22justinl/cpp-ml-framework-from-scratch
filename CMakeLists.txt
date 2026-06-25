@@ -5,6 +5,10 @@ project(cpp_ml_from_scratch)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+#  NOTE: clangd shows error
+# set(CXXFLAGS "-march=native")
+# set(CMAKE_CXX_FLAGS "${CXXFLAGS}")
+
 # Main library
 add_library(cpp_ml_from_scratch
     src/core/tensor.cpp
@@ -103,5 +107,12 @@ add_executable(mnist_digit_mlp
     examples/mnist_digit_mlp.cpp
 )
 target_link_libraries(mnist_digit_mlp PRIVATE
+    cpp_ml_from_scratch
+)
+
+add_executable(matmul
+    examples/matmul.cpp
+)
+target_link_libraries(matmul PRIVATE
     cpp_ml_from_scratch
 )

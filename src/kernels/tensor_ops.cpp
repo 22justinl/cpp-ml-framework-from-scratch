@@ -96,25 +96,7 @@ std::shared_ptr<TensorImpl> reshape(std::shared_ptr<const TensorImpl> a, const s
     }
     // invalid view, copy and reshape
     // copy to "contiguous" tensor
-    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, a->shape, a->requires_grad);
-
-    std::vector<size_t> idx(a->shape.size(), 0);
-    const std::vector<size_t>& shape = a->shape;
-
-    size_t a_offset = a->offset;
-    size_t res_offset = res->offset;
-
-    const std::vector<size_t>& a_strides = a->strides;
-    const std::vector<size_t>& res_strides = res->strides;
-
-    const std::vector<float>& a_data = a->storage->data;
-    std::vector<float>& res_data = res->storage->data;
-
-    const size_t n_el = a->n_el;
-    for (size_t i = 0; i < n_el; ++i) {
-        res_data[res_offset] = a_data[a_offset];
-        increment_offset_unary_op(idx, shape, a_offset, a_strides, res_offset, res_strides);
-    }
+    shared_ptr<TensorImpl> res = contiguous(a);
 
     // reshape
     res->shape = new_shape;
@@ -153,6 +135,29 @@ std::shared_ptr<TensorImpl> slice(std::shared_ptr<const TensorImpl> a, const std
         new_strides.push_back(1);
     }
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(a->storage, new_shape, new_strides, new_offset, a->requires_grad);
+    return res;
+}
+
+std::shared_ptr<TensorImpl> contiguous(shared_ptr<const TensorImpl> a) {
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, a->shape, a->requires_grad);
+
+    std::vector<size_t> idx(a->shape.size(), 0);
+    const std::vector<size_t>& shape = a->shape;
+
+    size_t a_offset = a->offset;
+    size_t res_offset = res->offset;
+
+    const std::vector<size_t>& a_strides = a->strides;
+    const std::vector<size_t>& res_strides = res->strides;
+
+    const std::vector<float>& a_data = a->storage->data;
+    std::vector<float>& res_data = res->storage->data;
+
+    const size_t n_el = a->n_el;
+    for (size_t i = 0; i < n_el; ++i) {
+        res_data[res_offset] = a_data[a_offset];
+        increment_offset_unary_op(idx, shape, a_offset, a_strides, res_offset, res_strides);
+    }
     return res;
 }
 }

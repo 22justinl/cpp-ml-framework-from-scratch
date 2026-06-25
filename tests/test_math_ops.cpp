@@ -91,6 +91,13 @@ TEST_CASE("Tensor matmul") {
     CHECK(check_tensor_equal(res1, expected1));
     CHECK(check_tensor_equal(res2, expected2));
 }
+TEST_CASE("Tensor matmul large") {
+    Tensor t1(1, {512,1024});
+    Tensor t2(2, {1024,1024});
+    Tensor res1 = matmul(t1,t2);
+    Tensor expected1(2048, {512,1024});
+    CHECK(check_tensor_equal(res1, expected1));
+}
 TEST_CASE("Tensor matmul (error cases)") {
     Tensor t1(0.f, {10,20});
     Tensor t2(0.f, {10,30});
