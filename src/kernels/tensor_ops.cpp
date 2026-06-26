@@ -155,6 +155,7 @@ std::shared_ptr<TensorImpl> contiguous(shared_ptr<const TensorImpl> a) {
 
     const size_t n_el = a->n_el;
     for (size_t i = 0; i < n_el; ++i) {
+        // TODO: no need for res_offset?
         res_data[res_offset] = a_data[a_offset];
         increment_offset_unary_op(idx, shape, a_offset, a_strides, res_offset, res_strides);
     }

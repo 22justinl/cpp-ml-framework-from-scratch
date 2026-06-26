@@ -110,9 +110,21 @@ target_link_libraries(mnist_digit_mlp PRIVATE
     cpp_ml_from_scratch
 )
 
-add_executable(matmul
-    examples/matmul.cpp
+add_executable(matmul1024
+    examples/matmul1024.cpp
 )
-target_link_libraries(matmul PRIVATE
+target_link_libraries(matmul1024 PRIVATE
+    cpp_ml_from_scratch
+)
+add_executable(matmul2048
+    examples/matmul2048.cpp
+)
+target_link_libraries(matmul2048 PRIVATE
+    cpp_ml_from_scratch
+)
+add_executable(matmul4096
+    examples/matmul4096.cpp
+)
+target_link_libraries(matmul4096 PRIVATE
     cpp_ml_from_scratch
 )

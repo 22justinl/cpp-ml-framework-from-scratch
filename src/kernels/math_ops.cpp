@@ -3,6 +3,7 @@
 #include "kernels/tensor_ops.h"
 #include "utils/tensor_utils.h"
 
+#include <iostream>
 #include <numbers>
 
 using std::shared_ptr;
@@ -75,44 +76,124 @@ shared_ptr<TensorImpl> scalar_mul(float a, shared_ptr<const TensorImpl> b) {
     return res;
 }
 
+// shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
+//     // TODO: broadcasting with matmul (different rules from elementwise operations)
+//     // TODO: nD matmul
+//     if (a->shape.size() != 2 || b->shape.size() != 2) {
+//         throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
+//     }
+//     if (a->shape[a->shape.size()-1] != b->shape[0]) {
+//         throw std::runtime_error("Cannot matrix multiply tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
+//     }
+//     shared_ptr<const TensorImpl> a_cont = is_contiguous(a) ? a : kernels::contiguous(a);
+//     shared_ptr<const TensorImpl> b_t = kernels::transpose(b, 0, 1);
+//     shared_ptr<const TensorImpl> b_t_cont = is_contiguous(b_t) ? b_t : kernels::contiguous(b_t);
+//     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({a->shape[0], b->shape[1]}), a->requires_grad || b->requires_grad);
+//
+//     std::vector<float>& res_data = res->storage->data;
+//     const std::vector<float>& a_data = a_cont->storage->data;
+//     const std::vector<float>& b_t_data = b_t_cont->storage->data;
+//
+//     const std::vector<size_t>& a_shape = a_cont->shape;
+//     const std::vector<size_t>& b_t_shape = b_t_cont->shape;
+//     const std::vector<size_t>& res_shape = res->shape;
+//
+//     const size_t M = res_shape[0];
+//     const size_t N = res_shape[1];
+//     const size_t K = a_cont->shape[1];
+//     const size_t B = 16;
+//     for (size_t ii = 0; ii < M; ii+=B) {
+//         for (size_t jj = 0; jj < N; jj+=B) {
+//             for (size_t kk = 0; kk < K; kk+=B) {
+//                 for (size_t i = ii; i < std::min(ii+B, M); ++i) {
+//                     const size_t a_offset = a_cont->offset + i * K;
+//                     for (size_t j = jj; j < std::min(jj+B, N); ++j) {
+//                         const size_t b_t_offset = b_t_cont->offset + j * K;
+//                         float s = 0;
+//                         for (size_t k = kk; k < std::min(kk+B, K); ++k) {
+//                             s += a_data[a_offset+k]*b_t_data[b_t_offset+k];
+//                         }
+//                         res_data[i*N+j] += s;
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//
+//     return res;
+// }
+
+// Assuming a is contiguous
+void pack(shared_ptr<const TensorImpl> a, const size_t start_i, const size_t start_j, const size_t h, const size_t w, std::vector<float>& dest) {
+    const auto& data = a->storage->data;
+    const size_t cols = a->shape[1];
+
+    size_t p = 0;
+
+    for (size_t i = 0; i < h; ++i) {
+        const size_t row_start = (start_i + i) * cols + start_j;
+        for (size_t j = 0; j < w; ++j) {
+            dest[p++] = data[row_start + j];
+        }
+    }
+}
+
 shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
-    // TODO: broadcasting with matmul (different rules from elementwise operations)
-    // TODO: nD matmul
     if (a->shape.size() != 2 || b->shape.size() != 2) {
         throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
     }
     if (a->shape[a->shape.size()-1] != b->shape[0]) {
         throw std::runtime_error("Cannot matrix multiply tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
     }
-    shared_ptr<const TensorImpl> a_cont = is_contiguous(a) ? a : kernels::contiguous(a);
-    shared_ptr<const TensorImpl> b_t = kernels::transpose(b, 0, 1);
-    shared_ptr<const TensorImpl> b_t_cont = is_contiguous(b_t) ? b_t : kernels::contiguous(b_t);
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({a->shape[0], b->shape[1]}), a->requires_grad || b->requires_grad);
 
+    if (b->offset > 0 || !is_contiguous(b)) {
+        b = kernels::contiguous(b);
+    }
+    shared_ptr<const TensorImpl> a_t = kernels::transpose(a, 0, 1);
+    if (a_t->offset > 0 || !is_contiguous(a_t)) {
+        a_t = kernels::contiguous(a_t);
+    }
+    constexpr size_t M_c = 128;  // M cache block size
+    constexpr size_t N_c = 128;  // N cache block size
+    constexpr size_t K_c = 256;  // K cache block size
+    constexpr size_t M_r = 4;    // M register block size
+    constexpr size_t N_r = 4;    // N register block size
+    const size_t M = a->shape[0];
+    const size_t N = b->shape[1];
+    const size_t K = a->shape[1];
     std::vector<float>& res_data = res->storage->data;
-    const std::vector<float>& a_data = a_cont->storage->data;
-    const std::vector<float>& b_t_data = b_t_cont->storage->data;
+    std::vector<float> pack_buffer_a(K_c * M_c);
+    std::vector<float> pack_buffer_b(K_c * N_c);
 
-    const std::vector<size_t>& a_shape = a_cont->shape;
-    const std::vector<size_t>& b_t_shape = b_t_cont->shape;
-    const std::vector<size_t>& res_shape = res->shape;
+    const std::vector<float>& a_t_data = a_t->storage->data;
+    const std::vector<float>& b_data = b->storage->data;
 
-    const size_t M = res_shape[0];
-    const size_t N = res_shape[1];
-    const size_t K = a_cont->shape[1];
-    const size_t B = 16;
-    for (size_t ii = 0; ii < M; ii+=B) {
-        for (size_t jj = 0; jj < N; jj+=B) {
-            for (size_t kk = 0; kk < K; kk+=B) {
-                for (size_t i = ii; i < std::min(ii+B, M); ++i) {
-                    const size_t a_offset = a_cont->offset + i * K;
-                    for (size_t j = jj; j < std::min(jj+B, N); ++j) {
-                        const size_t b_t_offset = b_t_cont->offset + j * K;
-                        float s = 0;
-                        for (size_t k = kk; k < std::min(kk+B, K); ++k) {
-                            s += a_data[a_offset+k]*b_t_data[b_t_offset+k];
+    for (size_t k = 0; k < K; k+=K_c) {
+        size_t kc = std::min(K_c, K-k);
+        for (size_t j = 0; j < N; j+=N_c) {
+            size_t nc = std::min(N_c, N-j);
+            pack(b, k, j, kc, nc, pack_buffer_b);
+            for (size_t i = 0; i < M; i+=M_c) {
+                size_t mc = std::min(M_c, M-i);
+                pack(a_t, k, i, kc, mc, pack_buffer_a);
+                for (size_t nn = 0; nn < nc; nn+=N_r) {
+                    for (size_t mm = 0; mm < mc; mm+=M_r) {
+                        float accum[M_r][N_r] = {};
+                        size_t actual_mr = std::min(M_r, mc-mm);
+                        size_t actual_nr = std::min(N_r, nc-nn);
+                        for (size_t l = 0; l < kc; ++l) {
+                            for (size_t m = 0; m < actual_mr; ++m) {
+                                for (size_t n = 0; n < actual_nr; ++n) {
+                                    accum[m][n] += pack_buffer_a[l*mc + m+mm] * pack_buffer_b[l*nc + n+nn];
+                                }
+                            }
                         }
-                        res_data[i*N+j] += s;
+                        for (size_t m = 0; m < actual_mr; ++m) {
+                            for (size_t n = 0; n < actual_nr; ++n) {
+                                res_data[(i+m+mm)*N + j + n+nn] += accum[m][n];
+                            }
+                        }
                     }
                 }
             }
