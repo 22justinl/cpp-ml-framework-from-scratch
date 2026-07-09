@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #  NOTE: clangd shows error
-# set(CXXFLAGS "-march=native")
-# set(CMAKE_CXX_FLAGS "${CXXFLAGS}")
+set(CXXFLAGS "-march=x86-64 -mavx2 -mfma")
+set(CMAKE_CXX_FLAGS "${CXXFLAGS}")
 
 # Main library
 add_library(cpp_ml_from_scratch

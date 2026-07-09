@@ -46,9 +46,9 @@ int main() {
 
     std::cout << "Training:" << std::endl;;
     for (size_t epoch = 0; epoch < epochs; ++epoch) {
-        ProgressBar progress_bar(0, X_train.shape()[0] / batch_size);
+        // ProgressBar progress_bar(0, X_train.shape()[0] / batch_size);
         for (size_t i = 0; i < X_train.shape()[0]; i+=batch_size) {
-            progress_bar.increment();
+            // progress_bar.increment();
             Tensor pred = model.forward(X_train(std::vector<TensorIndex>{Slice{i,i+batch_size}}));
             Tensor loss = loss_fn.forward(pred, Y_train(std::vector<TensorIndex>{Slice{i,i+batch_size}}));
             optimizer.zero_grad();
@@ -64,7 +64,7 @@ int main() {
             }
         }
         float test_acc = static_cast<float>(test_correct_count)/static_cast<float>(X_test.shape()[0]);
-        std::cout << "Epoch " << epoch << " Test accuracy: " << test_acc << "%" << "(" << test_correct_count << "/" << X_test.shape()[0] << ")" << std::endl;
+        std::cout << "Epoch " << epoch+1 << " Test accuracy: " << test_acc << "%" << "(" << test_correct_count << "/" << X_test.shape()[0] << ")" << std::endl;
     }
     Tensor train_pred = model.forward(X_train);
     Tensor train_pred_max = max(train_pred, 1);

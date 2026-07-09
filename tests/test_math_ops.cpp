@@ -60,9 +60,6 @@ TEST_CASE("Tensor div") {
     for (size_t i = 0; i < 8; ++i) {
         CHECK(div1.data_raw()[i] == i);
     }
-    CHECK_THROWS(t2/t1);
-    CHECK_THROWS(t1/t3);
-    CHECK_THROWS(t2/t3);
 }
 
 TEST_CASE("Tensor scalar_mul") {

@@ -3,13 +3,18 @@
 #include "kernels/tensor_ops.h"
 #include "utils/tensor_utils.h"
 
-#include <iostream>
 #include <numbers>
 
 using std::shared_ptr;
 using std::make_shared;
 
 namespace kernels {
+
+constexpr size_t M_c = 128;  // M cache block size
+constexpr size_t N_c = 128;  // N cache block size
+constexpr size_t K_c = 128;  // K cache block size
+constexpr size_t M_r = 4;    // M register block size
+constexpr size_t N_r = 4;    // N register block size
 
 void add_inplace(shared_ptr<TensorImpl> a, shared_ptr<const TensorImpl> b) {
     elementwise_binary_op_inplace(a, b, [](float a, float b) { return a + b; });
@@ -41,7 +46,7 @@ shared_ptr<TensorImpl> mul(shared_ptr<const TensorImpl> a, shared_ptr<const Tens
     return elementwise_binary_op(a, b, [](float a, float b){ return a * b; });
 }
 shared_ptr<TensorImpl> div(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
-    return elementwise_binary_op(a, b, [](float a, float b){ if (b == 0) { throw std::runtime_error("Divide by 0"); } return a / b; });
+    return elementwise_binary_op(a, b, [](float a, float b){ return a / b; });
 }
 shared_ptr<TensorImpl> add_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
     return elementwise_binary_op_broadcast(a, b, [](float a, float b){ return a + b; }, b_info);
@@ -53,7 +58,7 @@ shared_ptr<TensorImpl> mul_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<
     return elementwise_binary_op_broadcast(a, b, [](float a, float b){ return a * b; }, b_info);
 }
 shared_ptr<TensorImpl> div_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info) {
-    return elementwise_binary_op_broadcast(a, b, [](float a, float b){ if (b == 0) { throw std::runtime_error("Divide by 0"); } return a / b; }, b_info);
+    return elementwise_binary_op_broadcast(a, b, [](float a, float b){ return a / b; }, b_info);
 }
 shared_ptr<TensorImpl> div(float f, shared_ptr<const TensorImpl> a) {
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(f, a->shape, a->strides, a->requires_grad);
@@ -61,9 +66,6 @@ shared_ptr<TensorImpl> div(float f, shared_ptr<const TensorImpl> a) {
     std::vector<float>& res_data = res->storage->data;
 
     for (size_t i = 0; i < a_data.size(); ++i) {
-        if (!a_data[i]) {
-            throw std::runtime_error("Divide by zero error");
-        }
         res_data[i] /= a_data[i];
     }
     return res;
@@ -138,6 +140,54 @@ void pack(shared_ptr<const TensorImpl> a, const size_t start_i, const size_t sta
     }
 }
 
+void kernel_default(
+        const std::vector<float>& _a, const std::vector<float>& _b, std::vector<float>& res_data,
+        size_t kc,
+        size_t mr, size_t nr,
+        size_t mm, size_t nn,
+        size_t mc, size_t nc,
+        size_t i, size_t j,
+        size_t N
+        ) {
+    float accum[M_r][N_r] = {};
+    for (size_t l = 0; l < kc; ++l) {
+        for (size_t m = 0; m < mr; ++m) {
+            for (size_t n = 0; n < nr; ++n) {
+                accum[m][n] += _a[l*mc + m+mm*M_r] * _b[l*nc + n+nn*N_r];
+            }
+        }
+    }
+    for (size_t m = 0; m < mr; ++m) {
+        for (size_t n = 0; n < nr; ++n) {
+            res_data[(i*M_c+m+mm*M_r)*N + j*N_c + n+nn*N_r] += accum[m][n];
+        }
+    }
+}
+
+// void kernel_avx2(
+//         const std::vector<float>& _a, const std::vector<float>& _b, std::vector<float>& res_data,
+//         size_t kc,
+//         size_t mr, size_t nr,
+//         size_t mm, size_t nn,
+//         size_t mc, size_t nc,
+//         size_t i, size_t j,
+//         size_t N
+//         ) {
+//     float accum[M_r][N_r] = {};
+//     for (size_t l = 0; l < kc; ++l) {
+//         for (size_t m = 0; m < mr; ++m) {
+//             for (size_t n = 0; n < nr; ++n) {
+//                 accum[m][n] += _a[l*mc + m+mm*M_r] * _b[l*nc + n+nn*N_r];
+//             }
+//         }
+//     }
+//     for (size_t m = 0; m < mr; ++m) {
+//         for (size_t n = 0; n < nr; ++n) {
+//             res_data[(i*M_c+m+mm*M_r)*N + j*N_c + n+nn*N_r] += accum[m][n];
+//         }
+//     }
+// }
+
 shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     if (a->shape.size() != 2 || b->shape.size() != 2) {
         throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
@@ -154,51 +204,70 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
     if (a_t->offset > 0 || !is_contiguous(a_t)) {
         a_t = kernels::contiguous(a_t);
     }
-    constexpr size_t M_c = 128;  // M cache block size
-    constexpr size_t N_c = 128;  // N cache block size
-    constexpr size_t K_c = 256;  // K cache block size
-    constexpr size_t M_r = 4;    // M register block size
-    constexpr size_t N_r = 4;    // N register block size
-    const size_t M = a->shape[0];
-    const size_t N = b->shape[1];
-    const size_t K = a->shape[1];
-    std::vector<float>& res_data = res->storage->data;
-    std::vector<float> pack_buffer_a(K_c * M_c);
-    std::vector<float> pack_buffer_b(K_c * N_c);
 
+    const size_t M = a->shape[0]; // output dim 1
+    const size_t N = b->shape[1]; // ouput dim 2
+    const size_t K = a->shape[1]; // shared dim
+
+    // packed buffers
+    std::vector<float> _a(K_c * M_c);
+    std::vector<float> _b(K_c * N_c);
+
+    // number of blocks
+    const size_t mb = (M+M_c-1)/M_c;
+    const size_t nb = (N+N_c-1)/N_c;
+    const size_t kb = (K+K_c-1)/K_c;
+    // last block size
+    size_t _M_c = M%M_c;
+    size_t _N_c = N%N_c;
+    size_t _K_c = K%K_c;
+    // current block size (mc = M_c or _M_c etc.)
+    size_t mc, nc, kc;
+
+    // number of panels in cache block
+    size_t mp, np;
+    // last panel size
+    size_t _M_r, _N_r;
+    // current panel size (mr = M_r or _M_r etc.)
+    size_t mr, nr;
+
+    // tensor data
+    std::vector<float>& res_data = res->storage->data;
     const std::vector<float>& a_t_data = a_t->storage->data;
     const std::vector<float>& b_data = b->storage->data;
+    for (size_t k = 0; k < kb; ++k) {
+        kc = (k != kb-1 || _K_c == 0) ? K_c : _K_c;
+        for (size_t j = 0; j < nb; ++j) {
+            nc = (j != nb-1 || _N_c == 0) ? N_c : _N_c;
+            pack(b, k*K_c, j*N_c, kc, nc, _b);
+            for (size_t i = 0; i < mb; ++i) {
+                mc = (i != mb-1 || _M_c == 0) ? M_c : _M_c;
+                pack(a_t, k*K_c, i*M_c, kc, mc, _a);
 
-    for (size_t k = 0; k < K; k+=K_c) {
-        size_t kc = std::min(K_c, K-k);
-        for (size_t j = 0; j < N; j+=N_c) {
-            size_t nc = std::min(N_c, N-j);
-            pack(b, k, j, kc, nc, pack_buffer_b);
-            for (size_t i = 0; i < M; i+=M_c) {
-                size_t mc = std::min(M_c, M-i);
-                pack(a_t, k, i, kc, mc, pack_buffer_a);
-                for (size_t nn = 0; nn < nc; nn+=N_r) {
-                    for (size_t mm = 0; mm < mc; mm+=M_r) {
-                        float accum[M_r][N_r] = {};
-                        size_t actual_mr = std::min(M_r, mc-mm);
-                        size_t actual_nr = std::min(N_r, nc-nn);
-                        for (size_t l = 0; l < kc; ++l) {
-                            for (size_t m = 0; m < actual_mr; ++m) {
-                                for (size_t n = 0; n < actual_nr; ++n) {
-                                    accum[m][n] += pack_buffer_a[l*mc + m+mm] * pack_buffer_b[l*nc + n+nn];
-                                }
-                            }
-                        }
-                        for (size_t m = 0; m < actual_mr; ++m) {
-                            for (size_t n = 0; n < actual_nr; ++n) {
-                                res_data[(i+m+mm)*N + j + n+nn] += accum[m][n];
-                            }
-                        }
+                mp = (mc+M_r-1)/M_r;
+                np = (nc+N_r-1)/N_r;
+                _M_r = mc % M_r;
+                _N_r = nc % N_r;
+
+                for (size_t nn = 0; nn < np; ++nn) {
+                    nr = (nn != np-1 || _N_r == 0) ? N_r : _N_r;
+                    for (size_t mm = 0; mm < mp; ++mm) {
+                        mr = (mm != mp-1 || _M_r == 0) ? M_r : _M_r;
+                        kernel_default(
+                                _a, _b, res_data,
+                                kc,
+                                mr, nr,
+                                mm, nn,
+                                mc, nc,
+                                i, j,
+                                N);
                     }
                 }
             }
         }
     }
+
+
 
     return res;
 }
