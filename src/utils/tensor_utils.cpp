@@ -1,6 +1,7 @@
 #include "utils/tensor_utils.h"
 
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <vector>
 
@@ -66,6 +67,7 @@ void print_recursive(const Tensor& t1, const std::vector<size_t>& idx, size_t di
         }
         return;
     }
+    std::cout << std::setprecision(10);
     if (dim+1 != t1.shape().size()) {
         std::cout << "[\n";
     } else {

@@ -13,8 +13,8 @@ namespace kernels {
 constexpr size_t M_c = 128;  // M cache block size
 constexpr size_t N_c = 128;  // N cache block size
 constexpr size_t K_c = 128;  // K cache block size
-constexpr size_t M_r = 4;    // M register block size
-constexpr size_t N_r = 4;    // N register block size
+constexpr size_t M_r = 32;    // M register block size
+constexpr size_t N_r = 32;    // N register block size
 
 void add_inplace(shared_ptr<TensorImpl> a, shared_ptr<const TensorImpl> b) {
     elementwise_binary_op_inplace(a, b, [](float a, float b) { return a + b; });
@@ -78,88 +78,55 @@ shared_ptr<TensorImpl> scalar_mul(float a, shared_ptr<const TensorImpl> b) {
     return res;
 }
 
-// shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
-//     // TODO: broadcasting with matmul (different rules from elementwise operations)
-//     // TODO: nD matmul
-//     if (a->shape.size() != 2 || b->shape.size() != 2) {
-//         throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
-//     }
-//     if (a->shape[a->shape.size()-1] != b->shape[0]) {
-//         throw std::runtime_error("Cannot matrix multiply tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
-//     }
-//     shared_ptr<const TensorImpl> a_cont = is_contiguous(a) ? a : kernels::contiguous(a);
-//     shared_ptr<const TensorImpl> b_t = kernels::transpose(b, 0, 1);
-//     shared_ptr<const TensorImpl> b_t_cont = is_contiguous(b_t) ? b_t : kernels::contiguous(b_t);
-//     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({a->shape[0], b->shape[1]}), a->requires_grad || b->requires_grad);
-//
-//     std::vector<float>& res_data = res->storage->data;
-//     const std::vector<float>& a_data = a_cont->storage->data;
-//     const std::vector<float>& b_t_data = b_t_cont->storage->data;
-//
-//     const std::vector<size_t>& a_shape = a_cont->shape;
-//     const std::vector<size_t>& b_t_shape = b_t_cont->shape;
-//     const std::vector<size_t>& res_shape = res->shape;
-//
-//     const size_t M = res_shape[0];
-//     const size_t N = res_shape[1];
-//     const size_t K = a_cont->shape[1];
-//     const size_t B = 16;
-//     for (size_t ii = 0; ii < M; ii+=B) {
-//         for (size_t jj = 0; jj < N; jj+=B) {
-//             for (size_t kk = 0; kk < K; kk+=B) {
-//                 for (size_t i = ii; i < std::min(ii+B, M); ++i) {
-//                     const size_t a_offset = a_cont->offset + i * K;
-//                     for (size_t j = jj; j < std::min(jj+B, N); ++j) {
-//                         const size_t b_t_offset = b_t_cont->offset + j * K;
-//                         float s = 0;
-//                         for (size_t k = kk; k < std::min(kk+B, K); ++k) {
-//                             s += a_data[a_offset+k]*b_t_data[b_t_offset+k];
-//                         }
-//                         res_data[i*N+j] += s;
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//
-//     return res;
-// }
 
-// Assuming a is contiguous
-void pack(shared_ptr<const TensorImpl> a, const size_t start_i, const size_t start_j, const size_t h, const size_t w, std::vector<float>& dest) {
-    const auto& data = a->storage->data;
-    const size_t cols = a->shape[1];
-
+// Pack a_t[start_i:k_c][start_j:m_c] into contiguous buffer _a with shape (K_c, M_c) to fit in cache
+// a_t_stride = num cols in a_t = num rows in a
+// Assuming a_t is contiguous
+void pack_a_t(float* a_t, const size_t start_i, const size_t start_j, const size_t k_c, const size_t m_c, const size_t a_t_stride, float _a[K_c*M_c]) {
     size_t p = 0;
 
-    for (size_t i = 0; i < h; ++i) {
-        const size_t row_start = (start_i + i) * cols + start_j;
-        for (size_t j = 0; j < w; ++j) {
-            dest[p++] = data[row_start + j];
+    for (size_t i = 0; i < k_c; ++i) {
+        const size_t row_start = (start_i + i) * a_t_stride + start_j;
+        for (size_t j = 0; j < m_c; ++j) {
+            _a[p++] = a_t[row_start + j];
+        }
+    }
+}
+
+// Pack b[start_i:k_c][start_j:n_c] into contiguous buffer _b with shape (K_c, N_c) to fit in cache
+// b_stride = num rows in b
+// Assuming b is contiguous
+void pack_b(float* b, const size_t start_i, const size_t start_j, const size_t k_c, const size_t n_c, const size_t b_stride, float _b[K_c*N_c]) {
+    size_t p = 0;
+
+    for (size_t i = 0; i < k_c; ++i) {
+        const size_t row_start = (start_i + i) * b_stride + start_j;
+        for (size_t j = 0; j < n_c; ++j) {
+            _b[p++] = b[row_start + j];
         }
     }
 }
 
 void kernel_default(
-        const std::vector<float>& _a, const std::vector<float>& _b, std::vector<float>& res_data,
+        float* _a, float* _b, float* res_data,
         size_t kc,
-        size_t mr, size_t nr,
-        size_t mm, size_t nn,
         size_t mc, size_t nc,
-        size_t i, size_t j,
+        size_t mr, size_t nr,
         size_t N
         ) {
-    float accum[M_r][N_r] = {};
+    float accum[M_r*N_r] = {};
     for (size_t l = 0; l < kc; ++l) {
         for (size_t m = 0; m < mr; ++m) {
             for (size_t n = 0; n < nr; ++n) {
-                accum[m][n] += _a[l*mc + m+mm*M_r] * _b[l*nc + n+nn*N_r];
+                accum[m*N_r+n] += _a[m] * _b[n];
             }
         }
+        _a += mc;
+        _b += nc;
     }
     for (size_t m = 0; m < mr; ++m) {
         for (size_t n = 0; n < nr; ++n) {
-            res_data[(i*M_c+m+mm*M_r)*N + j*N_c + n+nn*N_r] += accum[m][n];
+            res_data[m*N + n] += accum[m*N_r+n];
         }
     }
 }
@@ -210,8 +177,8 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
     const size_t K = a->shape[1]; // shared dim
 
     // packed buffers
-    std::vector<float> _a(K_c * M_c);
-    std::vector<float> _b(K_c * N_c);
+    float _a[K_c * M_c];
+    float _b[K_c * N_c];
 
     // number of blocks
     const size_t mb = (M+M_c-1)/M_c;
@@ -232,34 +199,37 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
     size_t mr, nr;
 
     // tensor data
-    std::vector<float>& res_data = res->storage->data;
-    const std::vector<float>& a_t_data = a_t->storage->data;
-    const std::vector<float>& b_data = b->storage->data;
+    float* res_data = res->storage->data.data();
+    float* a_t_data = a_t->storage->data.data();
+    float* b_data = b->storage->data.data();
     for (size_t k = 0; k < kb; ++k) {
         kc = (k != kb-1 || _K_c == 0) ? K_c : _K_c;
         for (size_t j = 0; j < nb; ++j) {
             nc = (j != nb-1 || _N_c == 0) ? N_c : _N_c;
-            pack(b, k*K_c, j*N_c, kc, nc, _b);
+            np = (nc+N_r-1)/N_r;
+            _N_r = nc % N_r;
+            pack_b(b_data, k*K_c, j*N_c, kc, nc, N, _b);
             for (size_t i = 0; i < mb; ++i) {
                 mc = (i != mb-1 || _M_c == 0) ? M_c : _M_c;
-                pack(a_t, k*K_c, i*M_c, kc, mc, _a);
-
                 mp = (mc+M_r-1)/M_r;
-                np = (nc+N_r-1)/N_r;
                 _M_r = mc % M_r;
-                _N_r = nc % N_r;
+                pack_a_t(a_t_data, k*K_c, i*M_c, kc, mc, M, _a);
 
                 for (size_t nn = 0; nn < np; ++nn) {
                     nr = (nn != np-1 || _N_r == 0) ? N_r : _N_r;
                     for (size_t mm = 0; mm < mp; ++mm) {
                         mr = (mm != mp-1 || _M_r == 0) ? M_r : _M_r;
+
+                        // Array start pointers:
+                        // _a+mm*M_r =                      _a[mm][0]
+                        // _b+nn*N_r =                      _b[nn][0]
+                        // res_data + (i*M_c+mm*M_r)*N
+                        //          +  j*N_c + nn*N_r =     res_data[i*M_c+mm*M_r][j*N_c+nn*N_rn]  (block (i, j), panel (mm, nn), strides (N, 1))
                         kernel_default(
-                                _a, _b, res_data,
+                                _a+mm*M_r, _b+nn*N_r, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
                                 kc,
-                                mr, nr,
-                                mm, nn,
                                 mc, nc,
-                                i, j,
+                                mr, nr,
                                 N);
                     }
                 }
