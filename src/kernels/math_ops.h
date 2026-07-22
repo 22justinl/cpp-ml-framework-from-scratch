@@ -131,7 +131,6 @@ shared_ptr<TensorImpl> mul_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<
 shared_ptr<TensorImpl> div_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const BroadcastInfo& b_info);
 shared_ptr<TensorImpl> div(float f, shared_ptr<const TensorImpl> a);
 shared_ptr<TensorImpl> scalar_mul(float a, shared_ptr<const TensorImpl> b);
-shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b);
 shared_ptr<TensorImpl> dot(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b);
 
 shared_ptr<TensorImpl> power(shared_ptr<const TensorImpl> a, float x);

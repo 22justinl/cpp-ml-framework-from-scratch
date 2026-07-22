@@ -28,4 +28,11 @@
 //     print_image(X_train(std::vector<TensorIndex>{3}));
 //     Y_train(std::vector<TensorIndex>{3}).print();
 // }
-//
+
+TEST_CASE("Tensor matmul weird shape") {
+    Tensor t1(1, {931,583});
+    Tensor t2(2, {583,285});
+    Tensor res1 = matmul(t1,t2);
+    Tensor expected1(1166, {931, 285});
+    CHECK(check_tensor_equal(res1, expected1));
+}
