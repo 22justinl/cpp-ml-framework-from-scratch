@@ -1,14 +1,9 @@
 #include "matmul.h"
 #include "tensor_ops.h"
 #include "utils/tensor_utils.h"
+#include <immintrin.h>
 
 namespace kernels {
-constexpr size_t M_c = 128;  // M cache block size
-constexpr size_t N_c = 128;  // N cache block size
-constexpr size_t K_c = 128;  // K cache block size
-constexpr size_t M_r = 32;    // M register block size
-constexpr size_t N_r = 32;    // N register block size
-
 // Pack a_t[start_i:k_c][start_j:m_c] into contiguous buffer _a with shape (K_c, M_c) to fit in cache
 // a_t_stride = num cols in a_t = num rows in a
 // Assuming a_t is contiguous
@@ -98,29 +93,48 @@ void kernel_default(
     }
 }
 
-// void kernel_avx2(
-//         const std::vector<float>& _a, const std::vector<float>& _b, std::vector<float>& res_data,
-//         size_t kc,
-//         size_t mr, size_t nr,
-//         size_t mm, size_t nn,
-//         size_t mc, size_t nc,
-//         size_t i, size_t j,
-//         size_t N
-//         ) {
-//     float accum[M_r][N_r] = {};
-//     for (size_t l = 0; l < kc; ++l) {
-//         for (size_t m = 0; m < mr; ++m) {
-//             for (size_t n = 0; n < nr; ++n) {
-//                 accum[m][n] += _a[l*mc + m+mm*M_r] * _b[l*nc + n+nn*N_r];
-//             }
-//         }
-//     }
-//     for (size_t m = 0; m < mr; ++m) {
-//         for (size_t n = 0; n < nr; ++n) {
-//             res_data[(i*M_c+m+mm*M_r)*N + j*N_c + n+nn*N_r] += accum[m][n];
-//         }
-//     }
-// }
+void kernel_4x4_sse(
+        float* _a, float* _b, float* res_data,
+        size_t kc, size_t mr, size_t nr, size_t res_stride
+        ) {
+    __m128 _a00, _a11, _a22, _a33;  // vector for each element of _a
+    __m128 _b04;                    // vector for a row of _b
+    __m128 _c0, _c1, _c2, _c3;      // vector for each row of _c
+
+    _c0 = _mm_setzero_ps();
+    _c1 = _mm_setzero_ps();
+    _c2 = _mm_setzero_ps();
+    _c3 = _mm_setzero_ps();
+
+    for (size_t l = 0; l < kc; ++l) {
+        // load each element of _a into vectors
+        _a00 = _mm_load1_ps(_a);
+        _a11 = _mm_load1_ps(_a+1);
+        _a22 = _mm_load1_ps(_a+2);
+        _a33 = _mm_load1_ps(_a+3);
+
+        // load one row of _b
+        _b04 = _mm_load_ps(_b);
+
+        // calculate row 0
+        _c0 = _mm_add_ps(_c0, _mm_mul_ps(_a00, _b04));    // _c[0:4] += _c[0:4] + _a[0]*_b[0:4]
+        // calculate row 1
+        _c1 = _mm_add_ps(_c1, _mm_mul_ps(_a11, _b04));
+        // calculate row 2
+        _c2 = _mm_add_ps(_c2, _mm_mul_ps(_a22, _b04));
+        // calculate row 3
+        _c3 = _mm_add_ps(_c3, _mm_mul_ps(_a33, _b04));
+
+        // move data pointers to next row/col
+        _a += M_r;
+        _b += N_r;
+    }
+    // store rows/cols into res_data
+    _mm_store_ps(res_data, _c0);
+    _mm_store_ps(res_data+4, _c1);
+    _mm_store_ps(res_data+8, _c2);
+    _mm_store_ps(res_data+12, _c3);
+}
 
 shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     if (a->shape.size() != 2 || b->shape.size() != 2) {
@@ -144,8 +158,8 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
     const size_t K = a->shape[1]; // shared dim
 
     // packed buffers
-    float _a[K_c * M_c];
-    float _b[K_c * N_c];
+    alignas(16) float _a[K_c * M_c];
+    alignas(16) float _b[K_c * N_c];
 
     // number of blocks
     const size_t mb = (M+M_c-1)/M_c;
@@ -166,7 +180,7 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
     size_t mr, nr;
 
     // tensor data
-    float* res_data = res->storage->data.data();
+    alignas(16) float* res_data = res->storage->data.data();
     float* a_t_data = a_t->storage->data.data();
     float* b_data = b->storage->data.data();
 
@@ -194,7 +208,10 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
                         // _b+nn*kc*N_r =                   ptr to packed kcxN_r panel nn
                         // res_data + (i*M_c+mm*M_r)*N
                         //          +  j*N_c + nn*N_r =     ptr to block (i, j), panel (mm, nn) with strides (N, 1)
-                        kernel_default(
+                        // kernel_default(
+                        //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
+                        //         kc, mr, nr, N);
+                        kernel_4x4_sse(
                                 _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
                                 kc, mr, nr, N);
                     }
@@ -202,8 +219,6 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
             }
         }
     }
-
-
 
     return res;
 }
