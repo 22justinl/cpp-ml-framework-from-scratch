@@ -243,6 +243,104 @@ void kernel_4x8_sse(
         _mm_storeu_ps(res_data+4, _mm_add_ps(c_row_48, _c3_48));
     }
 }
+void kernel_8x4_sse(
+        float* _a, float* _b, float* res_data,
+        size_t kc, size_t mr, size_t nr, size_t res_stride
+        ) {
+    __m128 _a0, _a1, _a2, _a3,  // vector for each element of _a
+           _a4, _a5, _a6, _a7;
+    __m128 _b04;                // vector for a row of _b
+    __m128 _c0, _c1, _c2, _c3,  // vector for each row of _c
+           _c4, _c5, _c6, _c7;
+
+    _c0 = _mm_setzero_ps();
+    _c1 = _mm_setzero_ps();
+    _c2 = _mm_setzero_ps();
+    _c3 = _mm_setzero_ps();
+    _c4 = _mm_setzero_ps();
+    _c5 = _mm_setzero_ps();
+    _c6 = _mm_setzero_ps();
+    _c7 = _mm_setzero_ps();
+
+    for (size_t l = 0; l < kc; ++l) {
+        // load each element of _a into vectors
+        _a0 = _mm_load1_ps(_a);
+        _a1 = _mm_load1_ps(_a+1);
+        _a2 = _mm_load1_ps(_a+2);
+        _a3 = _mm_load1_ps(_a+3);
+        _a4 = _mm_load1_ps(_a+4);
+        _a5 = _mm_load1_ps(_a+5);
+        _a6 = _mm_load1_ps(_a+6);
+        _a7 = _mm_load1_ps(_a+7);
+
+        // load one row of _b
+        _b04 = _mm_load_ps(_b);
+
+        // calculate row 0
+        _c0 = _mm_add_ps(_c0, _mm_mul_ps(_a0, _b04));    // _c[0:4] += _c[0:4] + _a[0]*_b[0:4]
+        // calculate row 1
+        _c1 = _mm_add_ps(_c1, _mm_mul_ps(_a1, _b04));
+        // calculate row 2
+        _c2 = _mm_add_ps(_c2, _mm_mul_ps(_a2, _b04));
+        // calculate row 3
+        _c3 = _mm_add_ps(_c3, _mm_mul_ps(_a3, _b04));
+        // calculate row 4
+        _c4 = _mm_add_ps(_c4, _mm_mul_ps(_a4, _b04));
+        // calculate row 5
+        _c5 = _mm_add_ps(_c5, _mm_mul_ps(_a5, _b04));
+        // calculate row 6
+        _c6 = _mm_add_ps(_c6, _mm_mul_ps(_a6, _b04));
+        // calculate row 7
+        _c7 = _mm_add_ps(_c7, _mm_mul_ps(_a7, _b04));
+
+        // move data pointers to next row/col
+        _a += M_r;
+        _b += N_r;
+    }
+    // store rows/cols into res_data
+    if (mr < M_r || nr < N_r) {
+        alignas(16) float accum[32];
+        _mm_store_ps(accum,    _c0);
+        _mm_store_ps(accum+4,  _c1);
+        _mm_store_ps(accum+8,  _c2);
+        _mm_store_ps(accum+12, _c3);
+        _mm_store_ps(accum+16, _c4);
+        _mm_store_ps(accum+20, _c5);
+        _mm_store_ps(accum+24, _c6);
+        _mm_store_ps(accum+28, _c7);
+        for (size_t m = 0; m < mr; ++m) {
+            for (size_t n = 0; n < nr; ++n) {
+                res_data[m*res_stride + n] += accum[m*N_r+n];
+            }
+        }
+    } else {
+        __m128 c_row;
+        c_row = _mm_loadu_ps(res_data);
+        _mm_storeu_ps(res_data, _mm_add_ps(c_row, _c0));
+        res_data += res_stride;
+        c_row = _mm_loadu_ps(res_data);
+        _mm_storeu_ps(res_data, _mm_add_ps(c_row, _c1));
+        res_data += res_stride;
+        c_row = _mm_loadu_ps(res_data);
+        _mm_storeu_ps(res_data, _mm_add_ps(c_row, _c2));
+        res_data += res_stride;
+        c_row = _mm_loadu_ps(res_data);
+        _mm_storeu_ps(res_data, _mm_add_ps(c_row, _c3));
+        res_data += res_stride;
+        c_row = _mm_loadu_ps(res_data);
+        _mm_storeu_ps(res_data, _mm_add_ps(c_row, _c4));
+        res_data += res_stride;
+        c_row = _mm_loadu_ps(res_data);
+        _mm_storeu_ps(res_data, _mm_add_ps(c_row, _c5));
+        res_data += res_stride;
+        c_row = _mm_loadu_ps(res_data);
+        _mm_storeu_ps(res_data, _mm_add_ps(c_row, _c6));
+        res_data += res_stride;
+        c_row = _mm_loadu_ps(res_data);
+        _mm_storeu_ps(res_data, _mm_add_ps(c_row, _c7));
+
+    }
+}
 
 shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     if (a->shape.size() != 2 || b->shape.size() != 2) {
@@ -322,7 +420,10 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
                         // kernel_4x4_sse(
                         //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
                         //         kc, mr, nr, N);
-                        kernel_4x8_sse(
+                        // kernel_4x8_sse(
+                        //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
+                        //         kc, mr, nr, N);
+                        kernel_8x4_sse(
                                 _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
                                 kc, mr, nr, N);
                     }
