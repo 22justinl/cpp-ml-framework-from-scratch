@@ -1,4 +1,4 @@
-# ML from scratch (C++)
+# C++ ML Framework
 Run `mkdir build` first
 
 Build: `./scripts/build.sh`
@@ -7,5 +7,36 @@ Run tests: `./scripts/run_tests.sh`
 
 Run XOR MLP example: `./build/xor`
 
-## Basic structure
-<img width="1236" height="458" alt="Screenshot 2026-05-28 at 4 27 08 PM" src="https://github.com/user-attachments/assets/437ee5f4-e70b-4e0c-8163-91f6f588ca3c" />
+Run MNIST Digit MLP example: `./build/mnist_digit_mlp`
+
+Time matrix multiplication: `time ./build/matmul4096`
+
+## Overview
+<img width="1188" height="760" alt="C++ ML Framework Overview" src="https://github.com/user-attachments/assets/4aa35986-9a33-4291-91d0-1bf0fbd9522c" />
+
+### Matrix Multiplication Algorithm Overview
+<img width="1410" height="747" alt="BLAS GEMM Overview" src="https://github.com/user-attachments/assets/ef01881a-c47a-4c2f-bc42-828eb3b16c95" />
+
+## Matrix Multiplication Rough Benchmarks
+
+Average time taken for 5 trials of multiplication of two 4096x4096 matrices.
+
+|Kernel Type|Auto vectorization*|Time|
+|-|-|-|
+|scalar|false|9.3688|
+|scalar|true|3.9184|
+|SSE (4x4)|false|7.3904|
+|SSE (4x4)|true|7.1604|
+|SSE (4x8)|false|6.7326|
+|SSE (4x8)|true|6.9728|
+|SSE (8x4)|false|6.929|
+|SSE (8x4)|true|6.0934|
+|AVX (8x8)|false|5.2458|
+|AVX2 + FMA (8x8)|false|3.6972|
+|AVX2 + FMA (8x8)|true|3.8048|
+|AVX2 + FMA (16x8)|false|5.8852|
+|AVX2 + FMA (16x8)|true|5.6234|
+|**AVX2 + FMA (4x16)**|**false**|**3.095**|
+|AVX2 + FMA (4x16)|true|3.1862|
+
+*autovectorization with compiler flags: `-march=x86-64 -O3 -mavx2 -mfma`
