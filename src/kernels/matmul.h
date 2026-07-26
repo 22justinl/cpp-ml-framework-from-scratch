@@ -20,8 +20,12 @@ constexpr size_t K_c = 128;  // K cache block size
 // constexpr size_t N_r = 8;
 
 // 8x4 SSE kernel register block size
+// constexpr size_t M_r = 8;
+// constexpr size_t N_r = 4;
+
+// 8x8 AVX kernel register block size
 constexpr size_t M_r = 8;
-constexpr size_t N_r = 4;
+constexpr size_t N_r = 8;
 
 void pack_a_t(float* a_t, const size_t kc, const size_t mc, const size_t a_t_stride, float _a[K_c*M_c]);
 void pack_b(float* b, const size_t kc, const size_t nc, const size_t b_stride, float _b[K_c*N_c]);
@@ -39,6 +43,10 @@ void kernel_4x8_sse(
         size_t kc, size_t mr, size_t nr, size_t res_stride
         );
 void kernel_8x4_sse(
+        float* _a, float* _b, float* res_data,
+        size_t kc, size_t mr, size_t nr, size_t res_stride
+        );
+void kernel_8x8_avx(
         float* _a, float* _b, float* res_data,
         size_t kc, size_t mr, size_t nr, size_t res_stride
         );
