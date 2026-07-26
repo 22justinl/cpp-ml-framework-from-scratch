@@ -6,9 +6,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #  NOTE: clangd shows error
-# set(CXXFLAGS "-march=x86-64 -mavx2 -mfma") # show auto vectorizations: -Rpass=loop-vectorize
+set(CXXFLAGS "-march=x86-64 -mavx2 -mfma") # show auto vectorizations: -Rpass=loop-vectorize
 # set(CXXFLAGS "-march=x86-64 -mavx2 -mfma -Rpass=loop-vectorize")
-set(CXXFLAGS "-march=x86-64 -mavx -fno-vectorize -fno-slp-vectorize")
+# set(CXXFLAGS "-march=x86-64 -mavx2 -mfma -fno-vectorize -fno-slp-vectorize")
 set(CMAKE_CXX_FLAGS "${CXXFLAGS}")
 
 # Main library

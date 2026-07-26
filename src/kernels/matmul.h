@@ -24,6 +24,10 @@ constexpr size_t K_c = 128;  // K cache block size
 // constexpr size_t N_r = 4;
 
 // 8x8 AVX kernel register block size
+// constexpr size_t M_r = 8;
+// constexpr size_t N_r = 8;
+
+// 8x8 AVX2 FMA kernel register block size
 constexpr size_t M_r = 8;
 constexpr size_t N_r = 8;
 
