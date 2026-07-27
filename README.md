@@ -1,7 +1,7 @@
 # C++ ML Framework
 Run `mkdir build` first
 
-Build: `./scripts/build.sh`
+Build: `./scripts/build_release.sh`
 
 Run tests: `./scripts/run_tests.sh`
 
@@ -43,8 +43,10 @@ Naive triple loop implementation with no optimizations: 38.8692s
 
 *autovectorization with compiler flags: `-march=x86-64 -O3 -mavx2 -mfma`
 
+** using untuned parameters: $M_c=N_c=K_c=128$
+
 Best kernel: AVX2 + FMA (4x16)
 
-Best time after tuning block sizes: 2.7848s
+Best time after tuning parameters: 2.7848s
 
 Best parameters: $M_c=512, N_c=1024, K_c=256, M_r=4, N_r=16$
