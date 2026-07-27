@@ -5,7 +5,7 @@
 
 namespace nn {
 Linear::Linear(size_t in_features, size_t out_features, bool bias, std::string name): bias(bias) {
-    weight_.tensor = Tensor(0.f, {out_features, in_features}, true);
+    weight_.tensor = transpose(Tensor(0.f, {in_features, out_features}, true), 0, 1);
     initialize_tensor_normal(weight_.tensor, 0.f, std::sqrt(1.f/in_features));
     register_parameter(&weight_);
 

@@ -21,7 +21,7 @@ Time matrix multiplication: `time ./build/matmul4096`
 
 Average time taken for 5 trials of multiplication of two 4096x4096 matrices.
 
-|Kernel Type|Auto vectorization*|Time|
+|Kernel Type|Auto vectorization*|Time (s)|
 |-|-|-|
 |scalar|false|9.3688|
 |scalar|true|3.9184|
@@ -40,3 +40,9 @@ Average time taken for 5 trials of multiplication of two 4096x4096 matrices.
 |AVX2 + FMA (4x16)|true|3.1862|
 
 *autovectorization with compiler flags: `-march=x86-64 -O3 -mavx2 -mfma`
+
+Best kernel: AVX2 + FMA (4x16)
+
+Best time after tuning block sizes: 2.7848s
+
+Best parameters: $M_c=512, N_c=1024, K_c=256, M_r=4, N_r=16$

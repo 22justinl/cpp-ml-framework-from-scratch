@@ -3,9 +3,9 @@
 
 using std::shared_ptr;
 namespace kernels {
-constexpr size_t M_c = 128;  // M cache block size
-constexpr size_t N_c = 128;  // N cache block size
-constexpr size_t K_c = 128;  // K cache block size
+constexpr size_t M_c = 512;  // M cache block size
+constexpr size_t N_c = 1024;  // N cache block size
+constexpr size_t K_c = 256;  // K cache block size
 
 // Best register block sizes for scalar kernel + auto-vectorization (AVX2, MFA)
 // constexpr size_t M_r = 32;    // M register block size
