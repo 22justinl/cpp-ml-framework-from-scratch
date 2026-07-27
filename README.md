@@ -21,6 +21,8 @@ Time matrix multiplication: `time ./build/matmul4096`
 
 Average time taken for 5 trials of multiplication of two 4096x4096 matrices.
 
+Naive triple loop implementation with no optimizations: 38.8692s
+
 |Kernel Type|Auto vectorization*|Time (s)|
 |-|-|-|
 |scalar|false|9.3688|
