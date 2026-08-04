@@ -29,10 +29,10 @@
 //     Y_train(std::vector<TensorIndex>{3}).print();
 // }
 
-TEST_CASE("Tensor matmul weird shape") {
-    Tensor t1(1, {931,583});
-    Tensor t2(2, {583,285});
+TEST_CASE("Tensor matmul large 1") {
+    Tensor t1(1, {512,1024});
+    Tensor t2(2, {1024,1024});
     Tensor res1 = matmul(t1,t2);
-    Tensor expected1(1166, {931, 285});
+    Tensor expected1(2048, {512,1024});
     CHECK(check_tensor_equal(res1, expected1));
 }

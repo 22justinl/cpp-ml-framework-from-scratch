@@ -7,7 +7,7 @@ namespace kernels {
 // Pack a_t[start_i:k_c][start_j:m_c] into contiguous buffer _a with shape (K_c, M_c) to fit in cache
 // a_t_stride = num cols in a_t = num rows in a
 // Assuming a_t is contiguous
-void pack_a_t(float* a_t, const size_t kc, const size_t mc, const size_t a_t_stride, float _a[K_c*M_c]) {
+void pack_a_t_contiguous(float* a_t, const size_t kc, const size_t mc, const size_t row_stride, float _a[K_c*M_c]) {
     size_t p = 0;
 
     size_t mp = mc/M_r;     // number of FULL panels
@@ -20,7 +20,7 @@ void pack_a_t(float* a_t, const size_t kc, const size_t mc, const size_t a_t_str
             for (size_t m = 0; m < M_r; ++m) {
                 _a[p++] = curr_panel[m];
             }
-            curr_panel += a_t_stride;
+            curr_panel += row_stride;
         }
     }
     // pack nonfull panel with padding
@@ -33,7 +33,77 @@ void pack_a_t(float* a_t, const size_t kc, const size_t mc, const size_t a_t_str
             for (size_t m = _M_r; m < M_r; ++m) {
                 _a[p++] = 0;
             }
-            curr_panel += a_t_stride;
+            curr_panel += row_stride;
+        }
+    }
+}
+void pack_a_t(float* a_t, const size_t kc, const size_t mc, const size_t row_stride, const size_t col_stride, float _a[K_c*M_c]) {
+    size_t p = 0;
+
+    size_t mp = mc/M_r;     // number of FULL panels
+    size_t _M_r = mc % M_r; // nonfull panel size
+    float* curr_panel = a_t;
+    size_t curr_col = 0;
+    // pack full panels
+    for (size_t mm = 0; mm < mp; ++mm) {
+        curr_panel = a_t + mm*M_r*col_stride;
+        for (size_t l = 0; l < kc; ++l) {
+            curr_col = 0;
+            for (size_t m = 0; m < M_r; ++m) {
+                _a[p++] = curr_panel[curr_col];
+                curr_col += col_stride;
+            }
+            curr_panel += row_stride;
+        }
+    }
+    // pack nonfull panel with padding
+    if (_M_r != 0 && _M_r < M_r) {
+        curr_panel = a_t + mp*M_r*col_stride;
+        for (size_t l = 0; l < kc; ++l) {
+            curr_col = 0;
+            for (size_t m = 0; m < _M_r; ++m) {
+                _a[p++] = curr_panel[curr_col];
+                curr_col += col_stride;
+            }
+            for (size_t m = _M_r; m < M_r; ++m) {
+                _a[p++] = 0;
+            }
+            curr_panel += row_stride;
+        }
+    }
+}
+void pack_a(float* a, const size_t kc, const size_t mc, const size_t row_stride, const size_t col_stride, float _a[K_c*M_c]) {
+    size_t p = 0;
+
+    size_t mp = mc/M_r;     // number of FULL panels
+    size_t _M_r = mc % M_r; // nonfull panel size
+    float* curr_panel = a;
+    size_t curr_row = 0;
+    // pack full panels
+    for (size_t mm = 0; mm < mp; ++mm) {
+        curr_panel = a + mm*M_r*row_stride;
+        for (size_t l = 0; l < kc; ++l) {
+            curr_row = 0;
+            for (size_t m = 0; m < M_r; ++m) {
+                _a[p++] = curr_panel[curr_row];
+                curr_row += row_stride;
+            }
+            curr_panel += col_stride;
+        }
+    }
+    // pack nonfull panel with padding
+    if (_M_r != 0 && _M_r < M_r) {
+        curr_panel = a + mp*M_r*row_stride;
+        for (size_t l = 0; l < kc; ++l) {
+            curr_row = 0;
+            for (size_t m = 0; m < _M_r; ++m) {
+                _a[p++] = curr_panel[curr_row];
+                curr_row += row_stride;
+            }
+            for (size_t m = _M_r; m < M_r; ++m) {
+                _a[p++] = 0;
+            }
+            curr_panel += col_stride;
         }
     }
 }
@@ -41,7 +111,7 @@ void pack_a_t(float* a_t, const size_t kc, const size_t mc, const size_t a_t_str
 // Pack b[start_i:k_c][start_j:n_c] into contiguous buffer _b with shape (K_c, N_c) to fit in cache
 // b_stride = num rows in b
 // Assuming b is contiguous
-void pack_b(float* b, const size_t kc, const size_t nc, const size_t b_stride, float _b[K_c*N_c]) {
+void pack_b_contiguous(float* b, const size_t kc, const size_t nc, const size_t row_stride, float _b[K_c*N_c]) {
     size_t p = 0;
 
     size_t np = nc/N_r;     // number of FULL panels
@@ -54,7 +124,7 @@ void pack_b(float* b, const size_t kc, const size_t nc, const size_t b_stride, f
             for (size_t n = 0; n < N_r; ++n) {
                 _b[p++] = curr_panel[n];
             }
-            curr_panel += b_stride;
+            curr_panel += row_stride;
         }
     }
     // pack nonfull panel with padding
@@ -67,7 +137,43 @@ void pack_b(float* b, const size_t kc, const size_t nc, const size_t b_stride, f
             for (size_t n = _N_r; n < N_r; ++n) {
                 _b[p++] = 0;
             }
-            curr_panel += b_stride;
+            curr_panel += row_stride;
+        }
+    }
+}
+
+void pack_b(float* b, const size_t kc, const size_t nc, const size_t row_stride, const size_t col_stride, float _b[K_c*N_c]) {
+    size_t p = 0;
+
+    size_t np = nc/N_r;     // number of FULL panels
+    size_t _N_r = nc % N_r; // nonfull panel size
+    float* curr_panel = b;
+    size_t curr_col = 0;
+    // pack full panels
+    for (size_t nn = 0; nn < np; ++nn) {
+        curr_panel = b + nn*N_r*col_stride;
+        for (size_t l = 0; l < kc; ++l) {
+            curr_col = 0;
+            for (size_t n = 0; n < N_r; ++n) {
+                _b[p++] = curr_panel[curr_col];
+                curr_col += col_stride;
+            }
+            curr_panel += row_stride;
+        }
+    }
+    // pack nonfull panel with padding
+    if (_N_r != 0 && _N_r < N_r) {
+        curr_panel = b + np*N_r*col_stride;
+        for (size_t l = 0; l < kc; ++l) {
+            curr_col = 0;
+            for (size_t n = 0; n < _N_r; ++n) {
+                _b[p++] = curr_panel[curr_col];
+                curr_col += col_stride;
+            }
+            for (size_t n = _N_r; n < N_r; ++n) {
+                _b[p++] = 0;
+            }
+            curr_panel += row_stride;
         }
     }
 }
@@ -753,14 +859,6 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
     }
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, std::vector<size_t>({a->shape[0], b->shape[1]}), a->requires_grad || b->requires_grad);
 
-    if (b->offset > 0 || !is_contiguous(b)) {
-        b = kernels::contiguous(b);
-    }
-    shared_ptr<const TensorImpl> a_t = kernels::transpose(a, 0, 1);
-    if (a_t->offset > 0 || !is_contiguous(a_t)) {
-        a_t = kernels::contiguous(a_t);
-    }
-
     const size_t M = a->shape[0]; // output dim 1
     const size_t N = b->shape[1]; // ouput dim 2
     const size_t K = a->shape[1]; // shared dim
@@ -789,8 +887,13 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
 
     // tensor data
     float* res_data = res->storage->data.data();
-    float* a_t_data = a_t->storage->data.data();
-    float* b_data = b->storage->data.data();
+    float* a_data = a->storage->data.data() + a->offset;
+    float* b_data = b->storage->data.data() + b->offset;
+
+    size_t a_row_stride = a->strides[0];
+    size_t a_col_stride = a->strides[1];
+    size_t b_row_stride = b->strides[0];
+    size_t b_col_stride = b->strides[1];
 
     for (size_t k = 0; k < kb; ++k) {
         kc = (k != kb-1 || _K_c == 0) ? K_c : _K_c;
@@ -798,13 +901,13 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
             nc = (j != nb-1 || _N_c == 0) ? N_c : _N_c;
             np = (nc+N_r-1)/N_r;
             _N_r = nc % N_r;
-            pack_b(b_data + k*K_c*N + j*N_c, kc, nc, N, _b);
+            pack_b(b_data + k*K_c*b_row_stride + j*N_c*b_col_stride, kc, nc, b_row_stride, b_col_stride, _b);
 
             for (size_t i = 0; i < mb; ++i) {
                 mc = (i != mb-1 || _M_c == 0) ? M_c : _M_c;
                 mp = (mc+M_r-1)/M_r;
                 _M_r = mc % M_r;
-                pack_a_t(a_t_data+k*K_c*M+i*M_c, kc, mc, M, _a);
+                pack_a(a_data+k*K_c*a_col_stride+i*M_c*a_row_stride, kc, mc, a_row_stride, a_col_stride, _a);
 
                 for (size_t nn = 0; nn < np; ++nn) {
                     nr = (nn != np-1 || _N_r == 0) ? N_r : _N_r;
@@ -816,27 +919,6 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
                         // _b+nn*kc*N_r =                   ptr to packed kcxN_r panel nn
                         // res_data + (i*M_c+mm*M_r)*N
                         //          +  j*N_c + nn*N_r =     ptr to block (i, j), panel (mm, nn) with strides (N, 1)
-                        // kernel_default(
-                        //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
-                        //         kc, mr, nr, N);
-                        // kernel_4x4_sse(
-                        //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
-                        //         kc, mr, nr, N);
-                        // kernel_4x8_sse(
-                        //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
-                        //         kc, mr, nr, N);
-                        // kernel_8x4_sse(
-                        //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
-                        //         kc, mr, nr, N);
-                        // kernel_8x8_avx(
-                        //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
-                        //         kc, mr, nr, N);
-                        // kernel_8x8_avx2_fma(
-                        //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
-                        //         kc, mr, nr, N);
-                        // kernel_16x8_avx2_fma(
-                        //         _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
-                        //         kc, mr, nr, N);
                         kernel_4x16_avx2_fma(
                                 _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
                                 kc, mr, nr, N);
@@ -848,6 +930,5 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
 
     return res;
 }
-
 }
 
