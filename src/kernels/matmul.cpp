@@ -1,77 +1,11 @@
 #include "matmul.h"
-#include "tensor_ops.h"
 #include "utils/tensor_utils.h"
 #include <immintrin.h>
 
 namespace kernels {
-// Pack a_t[start_i:k_c][start_j:m_c] into contiguous buffer _a with shape (K_c, M_c) to fit in cache
-// a_t_stride = num cols in a_t = num rows in a
-// Assuming a_t is contiguous
-void pack_a_t_contiguous(float* a_t, const size_t kc, const size_t mc, const size_t row_stride, float _a[K_c*M_c]) {
-    size_t p = 0;
-
-    size_t mp = mc/M_r;     // number of FULL panels
-    size_t _M_r = mc % M_r; // nonfull panel size
-    float* curr_panel = a_t;
-    // pack full panels
-    for (size_t mm = 0; mm < mp; ++mm) {
-        curr_panel = a_t + mm*M_r;
-        for (size_t l = 0; l < kc; ++l) {
-            for (size_t m = 0; m < M_r; ++m) {
-                _a[p++] = curr_panel[m];
-            }
-            curr_panel += row_stride;
-        }
-    }
-    // pack nonfull panel with padding
-    if (_M_r != 0 && _M_r < M_r) {
-        curr_panel = a_t + mp*M_r;
-        for (size_t l = 0; l < kc; ++l) {
-            for (size_t m = 0; m < _M_r; ++m) {
-                _a[p++] = curr_panel[m];
-            }
-            for (size_t m = _M_r; m < M_r; ++m) {
-                _a[p++] = 0;
-            }
-            curr_panel += row_stride;
-        }
-    }
-}
-void pack_a_t(float* a_t, const size_t kc, const size_t mc, const size_t row_stride, const size_t col_stride, float _a[K_c*M_c]) {
-    size_t p = 0;
-
-    size_t mp = mc/M_r;     // number of FULL panels
-    size_t _M_r = mc % M_r; // nonfull panel size
-    float* curr_panel = a_t;
-    size_t curr_col = 0;
-    // pack full panels
-    for (size_t mm = 0; mm < mp; ++mm) {
-        curr_panel = a_t + mm*M_r*col_stride;
-        for (size_t l = 0; l < kc; ++l) {
-            curr_col = 0;
-            for (size_t m = 0; m < M_r; ++m) {
-                _a[p++] = curr_panel[curr_col];
-                curr_col += col_stride;
-            }
-            curr_panel += row_stride;
-        }
-    }
-    // pack nonfull panel with padding
-    if (_M_r != 0 && _M_r < M_r) {
-        curr_panel = a_t + mp*M_r*col_stride;
-        for (size_t l = 0; l < kc; ++l) {
-            curr_col = 0;
-            for (size_t m = 0; m < _M_r; ++m) {
-                _a[p++] = curr_panel[curr_col];
-                curr_col += col_stride;
-            }
-            for (size_t m = _M_r; m < M_r; ++m) {
-                _a[p++] = 0;
-            }
-            curr_panel += row_stride;
-        }
-    }
-}
+// Pack panel from a into contiguous buffer _a with shape (K_c, M_c) contiguously
+// row_stride: stride to next row
+// col_stride: stride to next col
 void pack_a(float* a, const size_t kc, const size_t mc, const size_t row_stride, const size_t col_stride, float _a[K_c*M_c]) {
     size_t p = 0;
 
@@ -107,41 +41,77 @@ void pack_a(float* a, const size_t kc, const size_t mc, const size_t row_stride,
         }
     }
 }
-
-// Pack b[start_i:k_c][start_j:n_c] into contiguous buffer _b with shape (K_c, N_c) to fit in cache
-// b_stride = num rows in b
-// Assuming b is contiguous
-void pack_b_contiguous(float* b, const size_t kc, const size_t nc, const size_t row_stride, float _b[K_c*N_c]) {
+// Pack panel from a_t into buffer _a with shape (K_c, M_c) contiguously
+void pack_a_t(float* a_t, const size_t kc, const size_t mc, const size_t row_stride, const size_t col_stride, float _a[K_c*M_c]) {
     size_t p = 0;
 
-    size_t np = nc/N_r;     // number of FULL panels
-    size_t _N_r = nc % N_r; // nonfull panel size
-    float* curr_panel = b;
+    size_t mp = mc/M_r;     // number of FULL panels
+    size_t _M_r = mc % M_r; // nonfull panel size
+    float* curr_panel = a_t;
+    size_t curr_col = 0;
     // pack full panels
-    for (size_t nn = 0; nn < np; ++nn) {
-        curr_panel = b + nn*N_r;
+    for (size_t mm = 0; mm < mp; ++mm) {
+        curr_panel = a_t + mm*M_r*col_stride;
         for (size_t l = 0; l < kc; ++l) {
-            for (size_t n = 0; n < N_r; ++n) {
-                _b[p++] = curr_panel[n];
+            curr_col = 0;
+            for (size_t m = 0; m < M_r; ++m) {
+                _a[p++] = curr_panel[curr_col];
+                curr_col += col_stride;
             }
             curr_panel += row_stride;
         }
     }
     // pack nonfull panel with padding
-    if (_N_r != 0 && _N_r < N_r) {
-        curr_panel = b + np*N_r;
+    if (_M_r != 0 && _M_r < M_r) {
+        curr_panel = a_t + mp*M_r*col_stride;
         for (size_t l = 0; l < kc; ++l) {
-            for (size_t n = 0; n < _N_r; ++n) {
-                _b[p++] = curr_panel[n];
+            curr_col = 0;
+            for (size_t m = 0; m < _M_r; ++m) {
+                _a[p++] = curr_panel[curr_col];
+                curr_col += col_stride;
             }
-            for (size_t n = _N_r; n < N_r; ++n) {
-                _b[p++] = 0;
+            for (size_t m = _M_r; m < M_r; ++m) {
+                _a[p++] = 0;
+            }
+            curr_panel += row_stride;
+        }
+    }
+}
+// Assuming a_t is contiguous
+void pack_a_t_contiguous(float* a_t, const size_t kc, const size_t mc, const size_t row_stride, float _a[K_c*M_c]) {
+    size_t p = 0;
+
+    size_t mp = mc/M_r;     // number of FULL panels
+    size_t _M_r = mc % M_r; // nonfull panel size
+    float* curr_panel = a_t;
+    // pack full panels
+    for (size_t mm = 0; mm < mp; ++mm) {
+        curr_panel = a_t + mm*M_r;
+        for (size_t l = 0; l < kc; ++l) {
+            for (size_t m = 0; m < M_r; ++m) {
+                _a[p++] = curr_panel[m];
+            }
+            curr_panel += row_stride;
+        }
+    }
+    // pack nonfull panel with padding
+    if (_M_r != 0 && _M_r < M_r) {
+        curr_panel = a_t + mp*M_r;
+        for (size_t l = 0; l < kc; ++l) {
+            for (size_t m = 0; m < _M_r; ++m) {
+                _a[p++] = curr_panel[m];
+            }
+            for (size_t m = _M_r; m < M_r; ++m) {
+                _a[p++] = 0;
             }
             curr_panel += row_stride;
         }
     }
 }
 
+// Pack panel from b into contiguous buffer _b with shape (K_c, N_c) contiguously
+// row_stride: stride to next row
+// col_stride: stride to next col
 void pack_b(float* b, const size_t kc, const size_t nc, const size_t row_stride, const size_t col_stride, float _b[K_c*N_c]) {
     size_t p = 0;
 
@@ -169,6 +139,37 @@ void pack_b(float* b, const size_t kc, const size_t nc, const size_t row_stride,
             for (size_t n = 0; n < _N_r; ++n) {
                 _b[p++] = curr_panel[curr_col];
                 curr_col += col_stride;
+            }
+            for (size_t n = _N_r; n < N_r; ++n) {
+                _b[p++] = 0;
+            }
+            curr_panel += row_stride;
+        }
+    }
+}
+// Assuming b is contiguous
+void pack_b_contiguous(float* b, const size_t kc, const size_t nc, const size_t row_stride, float _b[K_c*N_c]) {
+    size_t p = 0;
+
+    size_t np = nc/N_r;     // number of FULL panels
+    size_t _N_r = nc % N_r; // nonfull panel size
+    float* curr_panel = b;
+    // pack full panels
+    for (size_t nn = 0; nn < np; ++nn) {
+        curr_panel = b + nn*N_r;
+        for (size_t l = 0; l < kc; ++l) {
+            for (size_t n = 0; n < N_r; ++n) {
+                _b[p++] = curr_panel[n];
+            }
+            curr_panel += row_stride;
+        }
+    }
+    // pack nonfull panel with padding
+    if (_N_r != 0 && _N_r < N_r) {
+        curr_panel = b + np*N_r;
+        for (size_t l = 0; l < kc; ++l) {
+            for (size_t n = 0; n < _N_r; ++n) {
+                _b[p++] = curr_panel[n];
             }
             for (size_t n = _N_r; n < N_r; ++n) {
                 _b[p++] = 0;
@@ -867,22 +868,22 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
     alignas(16) float _a[K_c * M_c];
     alignas(16) float _b[K_c * N_c];
 
-    // number of blocks
+    // number of cache blocks
     const size_t mb = (M+M_c-1)/M_c;
     const size_t nb = (N+N_c-1)/N_c;
     const size_t kb = (K+K_c-1)/K_c;
-    // last block size
+    // last cache block size
     size_t _M_c = M%M_c;
     size_t _N_c = N%N_c;
     size_t _K_c = K%K_c;
-    // current block size (mc = M_c or _M_c etc.)
+    // current cache block size (mc = M_c or _M_c etc.)
     size_t mc, nc, kc;
 
-    // number of panels in cache block
+    // number of register blocks in cache block
     size_t mp, np;
-    // last panel size
+    // last register block size
     size_t _M_r, _N_r;
-    // current panel size (mr = M_r or _M_r etc.)
+    // current register block size (mr = M_r or _M_r etc.)
     size_t mr, nr;
 
     // tensor data
@@ -915,10 +916,10 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
                         mr = (mm != mp-1 || _M_r == 0) ? M_r : _M_r;
 
                         // Array start pointers:
-                        // _a+mm*kc*M_r =                   ptr to packed kc*M_r panel mm
-                        // _b+nn*kc*N_r =                   ptr to packed kcxN_r panel nn
+                        // _a+mm*kc*M_r =                   ptr to packed kcxM_r register block mm
+                        // _b+nn*kc*N_r =                   ptr to packed kcxN_r register block nn
                         // res_data + (i*M_c+mm*M_r)*N
-                        //          +  j*N_c + nn*N_r =     ptr to block (i, j), panel (mm, nn) with strides (N, 1)
+                        //          +  j*N_c + nn*N_r =     ptr to cache block (i, j), register block (mm, nn) with strides (N, 1)
                         kernel_4x16_avx2_fma(
                                 _a+mm*M_r*kc, _b+nn*N_r*kc, res_data+(i*M_c+mm*M_r)*N + j*N_c + nn*N_r,
                                 kc, mr, nr, N);
