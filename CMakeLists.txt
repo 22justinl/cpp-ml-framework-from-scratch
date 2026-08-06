@@ -131,3 +131,9 @@ add_executable(matmul4096
 target_link_libraries(matmul4096 PRIVATE
     cpp_ml_from_scratch
 )
+add_executable(gemm4096
+    examples/gemm4096.cpp
+)
+target_link_libraries(gemm4096 PRIVATE
+    cpp_ml_from_scratch
+)

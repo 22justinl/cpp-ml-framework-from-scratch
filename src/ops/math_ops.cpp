@@ -29,6 +29,31 @@ Tensor scalar_mul(float f, const Tensor& t1) {
 Tensor matmul(const Tensor& t1, const Tensor& t2) {
     return binop_helper<MatMulOp>(t1, t2);
 }
+Tensor scaled_matmul(float alpha, const Tensor& t1, const Tensor& t2) {
+    Tensor t3 = ScaledMatMulOp::forward(alpha, t1, t2);
+    if (t1.requires_grad() || t2.requires_grad()) {
+        std::shared_ptr<ScaledMatMulOp> op = std::make_shared<ScaledMatMulOp>(alpha, t1, t2, t3);
+        t3.set_grad_fn(op);
+    }
+    return t3;
+}
+Tensor mmadd(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
+    Tensor t4 = MMAddOp::forward(t1, t2, t3);
+    if (t1.requires_grad() || t2.requires_grad() || t3.requires_grad()) {
+        std::shared_ptr<MMAddOp> op = std::make_shared<MMAddOp>(t1, t2, t3, t4);
+        t4.set_grad_fn(op);
+    }
+    return t4;
+}
+Tensor mmadd_general(float alpha, const Tensor& t1, const Tensor& t2, float beta, const Tensor& t3) {
+    Tensor t4 = MMAddGeneralOp::forward(alpha, t1, t2, beta, t3);
+    if (t1.requires_grad() || t2.requires_grad() || t3.requires_grad()) {
+        std::shared_ptr<MMAddGeneralOp> op = std::make_shared<MMAddGeneralOp>(alpha, t1, t2, beta, t3, t4);
+        t4.set_grad_fn(op);
+    }
+    return t4;
+}
+
 Tensor dot(const Tensor& t1, const Tensor& t2) {
     return binop_helper<DotOp>(t1, t2);
 }

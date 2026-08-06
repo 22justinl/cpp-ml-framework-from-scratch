@@ -83,6 +83,47 @@ private:
     std::shared_ptr<const TensorImpl> b;
     std::shared_ptr<const TensorImpl> out;
 };
+class ScaledMatMulOp: public Operator {
+public:
+    ScaledMatMulOp(float alpha, const Tensor& t1, const Tensor& t2, const Tensor& t3);
+    static Tensor forward(float alpha, const Tensor& t1, const Tensor& t2);
+
+    void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
+private:
+    float alpha;
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> b;
+    std::shared_ptr<const TensorImpl> out;
+};
+class MMAddOp: public Operator {
+public:
+    MMAddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3, const Tensor& t4);
+    static Tensor forward(const Tensor& t1, const Tensor& t2, const Tensor& t3);
+
+    void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
+private:
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> b;
+    std::shared_ptr<const TensorImpl> c;
+    std::shared_ptr<const TensorImpl> out;
+};
+class MMAddGeneralOp: public Operator {
+public:
+    MMAddGeneralOp(float alpha, const Tensor& t1, const Tensor& t2, float beta, const Tensor& t3, const Tensor& t4);
+    static Tensor forward(float alpha, const Tensor& t1, const Tensor& t2, float beta, const Tensor& t3);
+
+    void backward() override;
+    std::vector<std::shared_ptr<const TensorImpl>> inputs() override;
+private:
+    float alpha;
+    std::shared_ptr<const TensorImpl> a;
+    std::shared_ptr<const TensorImpl> b;
+    float beta;
+    std::shared_ptr<const TensorImpl> c;
+    std::shared_ptr<const TensorImpl> out;
+};
 
 // 1D Tensor/vector dot product
 class DotOp: public Operator {

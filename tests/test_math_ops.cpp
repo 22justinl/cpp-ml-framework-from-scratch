@@ -88,6 +88,44 @@ TEST_CASE("Tensor matmul") {
     CHECK(check_tensor_equal(res1, expected1));
     CHECK(check_tensor_equal(res2, expected2));
 }
+TEST_CASE("Tensor scaled matmul") {
+    Tensor t1({0,1,2,3,4,5,6,7,8,9,10,11}, {3,4});
+    Tensor t2({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}, {4,5});
+    Tensor t3({1,1,1}, {1,3});
+    Tensor res1 = scaled_matmul(2,t1,t2);
+    Tensor res2 = scaled_matmul(3,t3,t1);
+    Tensor expected1({70*2,76*2,82*2,88*2,94*2,190*2,212*2,234*2,256*2,278*2,310*2,348*2,386*2,424*2,462*2}, {3,5});
+    Tensor expected2({12*3,15*3,18*3,21*3}, {1,4});
+    CHECK(check_tensor_equal(res1, expected1));
+    CHECK(check_tensor_equal(res2, expected2));
+}
+TEST_CASE("Tensor mmadd") {
+    Tensor t1({0,1,2,3,4,5,6,7,8,9,10,11}, {3,4});
+    Tensor t2({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}, {4,5});
+    Tensor t3({1,1,1}, {1,3});
+    Tensor t4(1,{3,5});
+    Tensor t5(1, {1,4});
+    Tensor res1 = mmadd(t1,t2,t4);
+    Tensor res2 = mmadd(t3,t1,t5);
+    Tensor expected1({70+1,76+1,82+1,88+1,94+1,190+1,212+1,234+1,256+1,278+1,310+1,348+1,386+1,424+1,462+1}, {3,5});
+    Tensor expected2({12+1,15+1,18+1,21+1}, {1,4});
+    CHECK(check_tensor_equal(res1, expected1));
+    CHECK(check_tensor_equal(res2, expected2));
+}
+TEST_CASE("Tensor mmadd general (GEMM)") {
+    Tensor t1({0,1,2,3,4,5,6,7,8,9,10,11}, {3,4});
+    Tensor t2({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}, {4,5});
+    Tensor t3({1,1,1}, {1,3});
+    Tensor t4(1,{3,5});
+    Tensor t5(1, {1,4});
+    Tensor res1 = mmadd_general(2,t1,t2,3,t4);
+    Tensor res2 = mmadd_general(5,t3,t1,-10,t5);
+    Tensor expected1({70*2+3,76*2+3,82*2+3,88*2+3,94*2+3,190*2+3,212*2+3,234*2+3,256*2+3,278*2+3,310*2+3,348*2+3,386*2+3,424*2+3,462*2+3}, {3,5});
+    Tensor expected2({12*5-10,15*5-10,18*5-10,21*5-10}, {1,4});
+    CHECK(check_tensor_equal(res1, expected1));
+    CHECK(check_tensor_equal(res2, expected2));
+}
+
 TEST_CASE("Tensor matmul weird shape") {
     Tensor t1(1, {931,583});
     Tensor t2(2, {583,285});
@@ -152,6 +190,16 @@ TEST_CASE("Tensor matmul large 3") {
          7635, 7670}, {2,67});
     CHECK(check_tensor_equal(res1, expected1));
 }
+TEST_CASE("Tensor mmadd general large") {
+    Tensor t1(1, {1024, 4096});
+    Tensor t2(2, {4096, 1024});
+    Tensor t3(4, {1024, 1024});
+    float beta = 0.5;
+    Tensor res = mmadd_general(1, t1, t2, beta, t3);
+    Tensor expected(8194, {1024,1024});
+    CHECK(check_tensor_equal(res, expected));
+}
+
 TEST_CASE("Tensor matmul (error cases)") {
     Tensor t1(0.f, {10,20});
     Tensor t2(0.f, {10,30});

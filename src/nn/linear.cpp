@@ -5,7 +5,7 @@
 
 namespace nn {
 Linear::Linear(size_t in_features, size_t out_features, bool bias, std::string name): bias(bias) {
-    weight_.tensor = transpose(Tensor(0.f, {in_features, out_features}, true), 0, 1);
+    weight_.tensor = Tensor(0.f, {in_features, out_features}, true);
     initialize_tensor_normal(weight_.tensor, 0.f, std::sqrt(1.f/in_features));
     register_parameter(&weight_);
 
@@ -19,8 +19,9 @@ Linear::Linear(size_t in_features, size_t out_features, bool bias, std::string n
 
 Tensor Linear::forward(Tensor x) {
     if (!bias) {
-        return matmul(x, transpose(weight_.tensor, 0, 1));
+        return matmul(x, weight_.tensor);
     }
-    return matmul(x, transpose(weight_.tensor, 0, 1))+bias_.tensor;
+    // return mmadd(x, weight_.tensor, bias_.tensor);
+    return matmul(x, weight_.tensor)+bias_.tensor;
 }
 }
