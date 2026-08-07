@@ -1,6 +1,7 @@
 #pragma once
 #include "core/tensor.h"
 #include "gemm_config.h"
+#include "utils/tensor_utils.h"
 
 using std::shared_ptr;
 namespace kernels {
@@ -177,8 +178,24 @@ void gemm(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorIm
     }
 }
 
-// TODO: template for nD GEMM
-// template<GemmCase Case>
-// shared_ptr<TensorImpl> nDgemm(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, float beta, shared_ptr<const TensorImpl> c);
+template<GemmCase Case>
+void nDgemm(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, float beta, shared_ptr<const TensorImpl> c) {
+    size_t n = a->shape.size();
+    size_t M = a->shape[n-2];
+    size_t K = a->shape[n-1];
+    size_t N = b->shape[n-1];
+    std::vector<size_t> idx(n-2, 0);
+    shared_ptr<TensorImpl> a_mat = make_shared<TensorImpl>(a->storage, std::vector<size_t>{M, K}, std::vector<size_t>{a->strides[n-2], a->strides[n-1]}, a->offset, a->requires_grad);
+    shared_ptr<TensorImpl> b_mat = make_shared<TensorImpl>(b->storage, std::vector<size_t>{K, N}, std::vector<size_t>{b->strides[n-2], b->strides[n-1]}, b->offset, b->requires_grad);
+    shared_ptr<TensorImpl> c_mat = make_shared<TensorImpl>(c->storage, std::vector<size_t>{M, N}, std::vector<size_t>{c->strides[n-2], c->strides[n-1]}, c->offset, c->requires_grad);
+    size_t& a_offset = a_mat->offset;
+    size_t& b_offset = b_mat->offset;
+    size_t& c_offset = c_mat->offset;
+    size_t n_mat = calculate_n_el(c->shape)/(M*N);
+    for (size_t i = 0; i < n_mat; ++i) {
+        gemm<Case>(alpha, a_mat, b_mat, beta, c_mat);
+        increment_offset_matmul_op(idx, c->shape, a_offset, a->strides, b_offset, b->strides, c_offset, c->strides);
+    }
+}
 
 }

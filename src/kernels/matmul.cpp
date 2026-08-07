@@ -630,53 +630,37 @@ void kernel_4x16_avx2_fma(float* _a, float* _b, float* c_rblock, size_t kc) {
 shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
     size_t n = a->shape.size();
     if (n != b->shape.size()) {
-        throw std::runtime_error("Matrix multiplication (non-broadcast) needs same number of dimensions");
+        throw std::runtime_error("matmul (non-broadcast) needs same number of dimensions");
     }
     if (a->shape[n-1] != b->shape[n-2] || !check_shape_match(a->shape, b->shape, 2)) {
-        throw std::runtime_error("Cannot matrix multiply (non-broadcast) tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
+        throw std::runtime_error("Invalid matmul (non-broadcast): shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
     }
-    if (a->shape.size() == 2) {
-        shared_ptr<TensorImpl> c = make_shared<TensorImpl>(0, std::vector<size_t>({a->shape[0], b->shape[1]}), a->requires_grad || b->requires_grad);
-        gemm<GemmCase::MatmulAdd>(1, a, b, 0, c);
-        return c;
-    }
-    size_t M = a->shape[n-2];
-    size_t K = a->shape[n-1];
-    size_t N = b->shape[n-1];
-    std::vector<size_t> c_shape = a->shape;
-    c_shape[n-1] = N;
-    shared_ptr<TensorImpl> c = make_shared<TensorImpl>(0, c_shape, a->requires_grad || b->requires_grad);
-    std::vector<size_t> idx(n-2, 0);
-    shared_ptr<TensorImpl> a_mat = make_shared<TensorImpl>(a->storage, std::vector<size_t>{M, K}, std::vector<size_t>{a->strides[n-2], a->strides[n-1]}, a->offset, a->requires_grad);
-    shared_ptr<TensorImpl> b_mat = make_shared<TensorImpl>(b->storage, std::vector<size_t>{K, N}, std::vector<size_t>{b->strides[n-2], b->strides[n-1]}, b->offset, b->requires_grad);
-    shared_ptr<TensorImpl> c_mat = make_shared<TensorImpl>(c->storage, std::vector<size_t>{M, N}, std::vector<size_t>{N, 1}, c->offset, c->requires_grad);
-    size_t& a_offset = a_mat->offset;
-    size_t& b_offset = b_mat->offset;
-    size_t& c_offset = c_mat->offset;
-    size_t n_mat = calculate_n_el(c->shape)/(M*N);
-    for (size_t i = 0; i < n_mat; ++i) {
-        gemm<GemmCase::MatmulAdd>(1, a_mat, b_mat, 0, c_mat);
-        increment_offset_matmul_op(idx, c->shape, a_offset, a->strides, b_offset, b->strides, c_offset, c->strides);
-    }
-    return c;
+    std::vector<size_t> res_shape = a->shape;
+    res_shape[n-1] = b->shape[n-1];
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, res_shape, a->requires_grad || b->requires_grad);
+    nDgemm<GemmCase::MatmulAdd>(1, a, b, 0, res);
+    return res;
 }
 
 shared_ptr<TensorImpl> scaled_matmul(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b) {
-    if (a->shape.size() != 2 || b->shape.size() != 2) {
-        throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
+    size_t n = a->shape.size();
+    if (n != b->shape.size()) {
+        throw std::runtime_error("scaled_matmul (non-broadcast) needs same number of dimensions");
     }
-    if (a->shape[a->shape.size()-1] != b->shape[0]) {
-        throw std::runtime_error("Cannot matrix multiply tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
+    if (a->shape[n-1] != b->shape[n-2] || !check_shape_match(a->shape, b->shape, 2)) {
+        throw std::runtime_error("Invalid scaled_matmul (non-broadcast): shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
     }
-    shared_ptr<TensorImpl> c = make_shared<TensorImpl>(0, std::vector<size_t>({a->shape[0], b->shape[1]}), a->requires_grad || b->requires_grad);
-    gemm<GemmCase::ScaledMatmul>(alpha, a, b, 0, c);
-    return c;
+    std::vector<size_t> res_shape = a->shape;
+    res_shape[n-1] = b->shape[n-1];
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, res_shape, a->requires_grad || b->requires_grad);
+    nDgemm<GemmCase::ScaledMatmul>(alpha, a, b, 0, res);
+    return res;
 }
 
 shared_ptr<TensorImpl> mmadd(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, shared_ptr<const TensorImpl> c) {
     size_t n = a->shape.size();
     if (n != b->shape.size() || n != c->shape.size()) {
-        throw std::runtime_error("MMAdd (non-broadcast) needs same number of dimensions");
+        throw std::runtime_error("mmadd (non-broadcast) needs same number of dimensions");
     }
     if (
             a->shape[n-1] != b->shape[n-2] ||               // same shared dimension
@@ -685,44 +669,29 @@ shared_ptr<TensorImpl> mmadd(shared_ptr<const TensorImpl> a, shared_ptr<const Te
             !check_shape_match(a->shape, b->shape, 2) ||    // correct prefix dims
             !check_shape_match(a->shape, c->shape, 2)
         ) {
-        throw std::runtime_error("Cannot mmadd tensors with shapes " + shape_to_string(a->shape) + ", " + shape_to_string(b->shape) + ", and " + shape_to_string(c->shape));
+        throw std::runtime_error("Invalid mmadd (non-broadcast): shapes " + shape_to_string(a->shape) + ", " + shape_to_string(b->shape) + ", and " + shape_to_string(c->shape));
     }
-    if (n == 2) {
-        shared_ptr<TensorImpl> res = make_shared<TensorImpl>(c->storage->data, c->shape, c->strides, a->requires_grad || b->requires_grad || c->requires_grad);
-        gemm<GemmCase::MatmulAdd>(1, a, b, 1, res);
-        return res;
-    }
-    size_t M = a->shape[n-2];
-    size_t K = a->shape[n-1];
-    size_t N = b->shape[n-1];
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(c->storage->data, c->shape, c->strides, a->requires_grad || b->requires_grad || c->requires_grad);
-    std::vector<size_t> idx(n-2, 0);
-    shared_ptr<TensorImpl> a_mat = make_shared<TensorImpl>(a->storage, std::vector<size_t>{M, K}, std::vector<size_t>{a->strides[n-2], a->strides[n-1]}, a->offset, a->requires_grad);
-    shared_ptr<TensorImpl> b_mat = make_shared<TensorImpl>(b->storage, std::vector<size_t>{K, N}, std::vector<size_t>{b->strides[n-2], b->strides[n-1]}, b->offset, b->requires_grad);
-    shared_ptr<TensorImpl> res_mat = make_shared<TensorImpl>(res->storage, std::vector<size_t>{M, N}, std::vector<size_t>{res->strides[n-2], res->strides[n-1]}, res->offset, res->requires_grad);
-    size_t& a_offset = a_mat->offset;
-    size_t& b_offset = b_mat->offset;
-    size_t& res_offset = res_mat->offset;
-    size_t n_mat = calculate_n_el(res->shape)/(M*N);
-    for (size_t i = 0; i < n_mat; ++i) {
-        gemm<GemmCase::MatmulAdd>(1, a_mat, b_mat, 1, res_mat);
-        increment_offset_matmul_op(idx, res->shape, a_offset, a->strides, b_offset, b->strides, res_offset, c->strides);
-    }
+    nDgemm<GemmCase::MatmulAdd>(1, a, b, 1, res);
     return res;
 }
 
 shared_ptr<TensorImpl> mmadd_general(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, float beta, shared_ptr<const TensorImpl> c) {
-    if (a->shape.size() != 2 || b->shape.size() != 2) {
-        throw std::runtime_error("Matrix multiplication only supported for 2D tensors");
+    size_t n = a->shape.size();
+    if (n != b->shape.size() || n != c->shape.size()) {
+        throw std::runtime_error("mmadd_general (non-broadcast) needs same number of dimensions");
     }
-    if (a->shape[a->shape.size()-1] != b->shape[0]) {
-        throw std::runtime_error("Cannot matrix multiply tensors with shapes " + shape_to_string(a->shape) + " and " + shape_to_string(b->shape));
-    }
-    if (a->shape[0] != c->shape[0] || b->shape[1] != c->shape[1]) {
-        throw std::runtime_error("Cannot mmadd tensors with shapes " + shape_to_string(a->shape) + ", " + shape_to_string(b->shape) + ", and " + shape_to_string(c->shape));
+    if (
+            a->shape[n-1] != b->shape[n-2] ||               // same shared dimension
+            a->shape[n-2] != c->shape[n-2] ||               // correct matrix dims for c
+            b->shape[n-1] != c->shape[n-1] ||
+            !check_shape_match(a->shape, b->shape, 2) ||    // correct prefix dims
+            !check_shape_match(a->shape, c->shape, 2)
+        ) {
+        throw std::runtime_error("Invalid mmadd_general (non-broadcast): shapes " + shape_to_string(a->shape) + ", " + shape_to_string(b->shape) + ", and " + shape_to_string(c->shape));
     }
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(c->storage->data, c->shape, c->strides, a->requires_grad || b->requires_grad || c->requires_grad);
-    gemm<GemmCase::General>(alpha, a, b, beta, res);
+    nDgemm<GemmCase::General>(alpha, a, b, beta, res);
     return res;
 }
 }
