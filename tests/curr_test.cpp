@@ -1,3 +1,4 @@
+#include "core/broadcast.h"
 #include "doctest.h"
 
 #include "core/tensor.h"
@@ -229,3 +230,78 @@ TEST_CASE("Tensor nD mmadd (non-contiguous)") {
             }, {2,2,2,3});
     CHECK(check_tensor_equal(t4, expected));
 }
+
+TEST_CASE("matmul broadcasting shape") {
+    Tensor t1(0, {5,4,1,2,5});
+    Tensor t2(0, {1,1,3,5,2});
+    std::vector<size_t> b_shape = compute_broadcast_shape(t1.shape(), t2.shape(), 2);
+    CHECK(check_shape_match(b_shape, {5,4,3,2,5}, 2));
+}
+
+TEST_CASE("matmul matmul broadcast") {
+    Tensor t1({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60},{2,3,1,2,5});
+    Tensor t2({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}, {1,1,2,5,2});
+    Tensor t3 = matmul(t1, t2);
+    Tensor expected({
+            95,110,220,260,
+            245,260,620,660,
+
+            345,410,470,560,
+            995,1060,1370,1460,
+
+            595,710,720,860,
+            1745,1860,2120,2260,
+
+
+            845,1010,970,1160,
+            2495,2660,2870,3060,
+
+            1095,1310,1220,1460,
+            3245,3460,3620,3860,
+
+            1345,1610,1470,1760,
+            3995,4260,4370,4660
+            }, {2,3,2,2,2});
+    CHECK(check_tensor_equal(t3, expected));
+}
+
+TEST_CASE("matmul mmadd broadcast") {
+    Tensor t1({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60},{2,3,1,2,5});
+    Tensor t2({1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}, {1,1,2,5,2});
+    Tensor t3({1,2,3,4,5,6,7,8}, {2,1,1,2,2});
+    Tensor t4 = mmadd(t1, t2, t3);
+    Tensor expected({
+            96,112,223,264,
+            246,262,623,664,
+
+            346,412,473,564,
+            996,1062,1373,1464,
+
+            596,712,723,864,
+            1746,1862,2123,2264,
+
+
+            850,1016,977,1168,
+            2500,2666,2877,3068,
+
+            1100,1316,1227,1468,
+            3250,3466,3627,3868,
+
+            1350,1616,1477,1768,
+            4000,4266,4377,4668
+            }, {2,3,2,2,2});
+    CHECK(check_tensor_equal(t4, expected));
+    // std::cout << "expected" << std::endl;
+    // expected.print();
+    // std::cout << "actual" << std::endl;
+    // t4.print();
+}
+
+// TEST_CASE("Tensor broadcast copy") {
+//     Tensor t1({1,2,3,4,5,6}, {2,3});
+//     std::vector<size_t> out_shape = compute_broadcast_shape({2,3}, {3,3,2,3});
+//     std::vector<size_t> new_strides = compute_broadcast_strides(out_shape, t1.shape(), t1.strides_raw());
+//     std::cout << shape_to_string(out_shape) << ", " << shape_to_string(new_strides) << std::endl;
+//     Tensor res(broadcast_copy(t1.impl(), out_shape, new_strides));
+//     res.print();
+// }

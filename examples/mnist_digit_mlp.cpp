@@ -55,17 +55,17 @@ int main() {
             loss.backward();
             optimizer.step();
         }
-        // Tensor test_pred = model.forward(X_test);
-        // Tensor test_pred_max = max(test_pred, 1);
-        // size_t test_correct_count = 0;
-        // for (size_t i = 0; i < X_test.shape()[0]; ++i) {
-        //     if (test_pred_max({i}) == test_pred({i, static_cast<size_t>(Y_test({i}))})) {
-        //         ++test_correct_count;
-        //     }
-        // }
-        // float test_acc = static_cast<float>(test_correct_count)/static_cast<float>(X_test.shape()[0]);
-        // std::cout << "Epoch " << epoch+1 << " Test accuracy: " << test_acc << "%" << "(" << test_correct_count << "/" << X_test.shape()[0] << ")" << std::endl;
-        std::cout << "Epoch " << epoch+1 << std::endl;
+        Tensor test_pred = model.forward(X_test);
+        Tensor test_pred_max = max(test_pred, 1);
+        size_t test_correct_count = 0;
+        for (size_t i = 0; i < X_test.shape()[0]; ++i) {
+            if (test_pred_max({i}) == test_pred({i, static_cast<size_t>(Y_test({i}))})) {
+                ++test_correct_count;
+            }
+        }
+        float test_acc = static_cast<float>(test_correct_count)/static_cast<float>(X_test.shape()[0]);
+        std::cout << "Epoch " << epoch+1 << " Test accuracy: " << test_acc << "%" << "(" << test_correct_count << "/" << X_test.shape()[0] << ")" << std::endl;
+        // std::cout << "Epoch " << epoch+1 << std::endl;
     }
     Tensor train_pred = model.forward(X_train);
     Tensor train_pred_max = max(train_pred, 1);

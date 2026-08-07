@@ -1,4 +1,5 @@
 #include "matmul.h"
+#include "core/broadcast.h"
 #include "core/tensor.h"
 #include "utils/tensor_utils.h"
 #include <immintrin.h>
@@ -692,6 +693,29 @@ shared_ptr<TensorImpl> mmadd_general(float alpha, shared_ptr<const TensorImpl> a
     }
     shared_ptr<TensorImpl> res = make_shared<TensorImpl>(c->storage->data, c->shape, c->strides, a->requires_grad || b->requires_grad || c->requires_grad);
     nDgemm<GemmCase::General>(alpha, a, b, beta, res);
+    return res;
+}
+
+shared_ptr<TensorImpl> matmul_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const MatmulBroadcastInfo& b_info) {
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, b_info.out_shape, b_info.out_strides, a->requires_grad || b->requires_grad);
+    nDgemm_broadcast<GemmCase::MatmulAdd>(1, a, b, 0, res, b_info);
+    return res;
+}
+
+shared_ptr<TensorImpl> scaled_matmul_broadcast(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const MatmulBroadcastInfo& b_info) {
+    shared_ptr<TensorImpl> res = make_shared<TensorImpl>(0, b_info.out_shape, b_info.out_strides, a->requires_grad || b->requires_grad);
+    nDgemm_broadcast<GemmCase::MatmulAdd>(alpha, a, b, 0, res, b_info);
+    return res;
+}
+
+shared_ptr<TensorImpl> mmadd_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, shared_ptr<const TensorImpl> c, const MatmulBroadcastInfo& b_info) {
+    shared_ptr<TensorImpl> res = broadcast_copy(c, b_info.out_shape, b_info.c_strides, a->requires_grad || b->requires_grad || c->requires_grad);
+    nDgemm_broadcast<GemmCase::MatmulAdd>(1, a, b, 1, res, b_info);
+    return res;
+}
+shared_ptr<TensorImpl> mmadd_general_broadcast(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, float beta, shared_ptr<const TensorImpl> c, const MatmulBroadcastInfo& b_info) {
+    shared_ptr<TensorImpl> res = broadcast_copy(c, b_info.out_shape, b_info.c_strides, a->requires_grad || b->requires_grad || c->requires_grad);
+    nDgemm_broadcast<GemmCase::MatmulAdd>(alpha, a, b, beta, res, b_info);
     return res;
 }
 }

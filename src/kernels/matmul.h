@@ -1,4 +1,5 @@
 #pragma once
+#include "core/broadcast.h"
 #include "core/tensor.h"
 #include "gemm_config.h"
 #include "utils/tensor_utils.h"
@@ -40,6 +41,11 @@ shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const T
 shared_ptr<TensorImpl> scaled_matmul(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b);
 shared_ptr<TensorImpl> mmadd(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, shared_ptr<const TensorImpl> c);
 shared_ptr<TensorImpl> mmadd_general(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, float beta, shared_ptr<const TensorImpl> c);
+
+shared_ptr<TensorImpl> matmul_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const MatmulBroadcastInfo& b_info);
+shared_ptr<TensorImpl> scaled_matmul_broadcast(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, const MatmulBroadcastInfo& b_info);
+shared_ptr<TensorImpl> mmadd_broadcast(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, shared_ptr<const TensorImpl> c, const MatmulBroadcastInfo& b_info);
+shared_ptr<TensorImpl> mmadd_general_broadcast(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, float beta, shared_ptr<const TensorImpl> c, const MatmulBroadcastInfo& b_info);
 
 // process one pair of cache blocks
 template<MacrokernelCase Case>
@@ -185,9 +191,9 @@ void nDgemm(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const Tensor
     size_t K = a->shape[n-1];
     size_t N = b->shape[n-1];
     std::vector<size_t> idx(n-2, 0);
-    shared_ptr<TensorImpl> a_mat = make_shared<TensorImpl>(a->storage, std::vector<size_t>{M, K}, std::vector<size_t>{a->strides[n-2], a->strides[n-1]}, a->offset, a->requires_grad);
-    shared_ptr<TensorImpl> b_mat = make_shared<TensorImpl>(b->storage, std::vector<size_t>{K, N}, std::vector<size_t>{b->strides[n-2], b->strides[n-1]}, b->offset, b->requires_grad);
-    shared_ptr<TensorImpl> c_mat = make_shared<TensorImpl>(c->storage, std::vector<size_t>{M, N}, std::vector<size_t>{c->strides[n-2], c->strides[n-1]}, c->offset, c->requires_grad);
+    shared_ptr<TensorImpl> a_mat = make_shared<TensorImpl>(a->storage, std::vector<size_t>{M, K}, std::vector<size_t>{a->strides[n-2], a->strides[n-1]}, a->offset, false);
+    shared_ptr<TensorImpl> b_mat = make_shared<TensorImpl>(b->storage, std::vector<size_t>{K, N}, std::vector<size_t>{b->strides[n-2], b->strides[n-1]}, b->offset, false);
+    shared_ptr<TensorImpl> c_mat = make_shared<TensorImpl>(c->storage, std::vector<size_t>{M, N}, std::vector<size_t>{c->strides[n-2], c->strides[n-1]}, c->offset, false);
     size_t& a_offset = a_mat->offset;
     size_t& b_offset = b_mat->offset;
     size_t& c_offset = c_mat->offset;
@@ -195,6 +201,26 @@ void nDgemm(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const Tensor
     for (size_t i = 0; i < n_mat; ++i) {
         gemm<Case>(alpha, a_mat, b_mat, beta, c_mat);
         increment_offset_matmul_op(idx, c->shape, a_offset, a->strides, b_offset, b->strides, c_offset, c->strides);
+    }
+}
+
+template<GemmCase Case>
+void nDgemm_broadcast(float alpha, shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b, float beta, shared_ptr<const TensorImpl> c, const MatmulBroadcastInfo& b_info) {
+    size_t n = b_info.out_shape.size();
+    size_t M = b_info.out_shape[n-2];
+    size_t K = a->shape[a->shape.size()-1];
+    size_t N = b_info.out_shape[n-1];
+    std::vector<size_t> idx(n-2, 0);
+    shared_ptr<TensorImpl> a_mat = make_shared<TensorImpl>(a->storage, std::vector<size_t>{M, K}, std::vector<size_t>{b_info.a_strides[n-2], b_info.a_strides[n-1]}, a->offset, false);
+    shared_ptr<TensorImpl> b_mat = make_shared<TensorImpl>(b->storage, std::vector<size_t>{K, N}, std::vector<size_t>{b_info.b_strides[n-2], b_info.b_strides[n-1]}, b->offset, false);
+    shared_ptr<TensorImpl> c_mat = make_shared<TensorImpl>(c->storage, std::vector<size_t>{M, N}, std::vector<size_t>{b_info.out_strides[n-2], b_info.out_strides[n-1]}, c->offset, false);
+    size_t& a_offset = a_mat->offset;
+    size_t& b_offset = b_mat->offset;
+    size_t& c_offset = c_mat->offset;
+    size_t n_mat = calculate_n_el(b_info.out_shape)/(M*N);
+    for (size_t i = 0; i < n_mat; ++i) {
+        gemm<Case>(alpha, a_mat, b_mat, beta, c_mat);
+        increment_offset_matmul_op(idx, b_info.out_shape, a_offset, b_info.a_strides, b_offset, b_info.b_strides, c_offset, b_info.out_strides);
     }
 }
 

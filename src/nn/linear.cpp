@@ -21,7 +21,6 @@ Tensor Linear::forward(Tensor x) {
     if (!bias) {
         return matmul(x, weight_.tensor);
     }
-    // return mmadd(x, weight_.tensor, bias_.tensor);
-    return matmul(x, weight_.tensor)+bias_.tensor;
+    return mmadd(x, weight_.tensor, bias_.tensor);
 }
 }

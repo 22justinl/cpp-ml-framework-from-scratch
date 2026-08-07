@@ -132,30 +132,43 @@ MatMulOp::MatMulOp(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
     out = t3.impl();
 }
 Tensor MatMulOp::forward(const Tensor& t1, const Tensor& t2) {
-    return Tensor(kernels::matmul(t1.impl(), t2.impl()));
+    if (check_shape_match(t1.shape(), t2.shape(), 2)) {
+        return Tensor(kernels::matmul(t1.impl(), t2.impl()));
+    }
+    MatmulBroadcastInfo b_info = construct_matrix_broadcast_info(t1.impl(), t2.impl());
+    return Tensor(kernels::matmul_broadcast(t1.impl(), t2.impl(), b_info));
 }
 void MatMulOp::backward() {
     if (a->requires_grad) {
-        kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b, 0, 1)));
+        kernels::add_inplace(a->grad->impl(), reduce_to_shape(kernels::matmul(out->grad->impl(), kernels::transpose(b, 0, 1)), a->shape));
     }
     if (b->requires_grad) {
-        kernels::add_inplace(b->grad->impl(), kernels::matmul(kernels::transpose(a, 0, 1), out->grad->impl()));
+        kernels::add_inplace(b->grad->impl(), reduce_to_shape(kernels::matmul(kernels::transpose(a, 0, 1), out->grad->impl()), b->shape));
     }
 }
 std::vector<std::shared_ptr<const TensorImpl>> MatMulOp::inputs() {
     return {a, b};
 }
 
-// TODO: matmul cases backward (NEED BROADCASTING FOR ADD)
 ScaledMatMulOp::ScaledMatMulOp(float alpha, const Tensor& t1, const Tensor& t2, const Tensor& t3): alpha(alpha) {
     a = t1.impl();
     b = t2.impl();
     out = t3.impl();
 }
 Tensor ScaledMatMulOp::forward(float alpha, const Tensor& t1, const Tensor& t2) {
-    return Tensor(kernels::scaled_matmul(alpha, t1.impl(), t2.impl()));
+    if (check_shape_match(t1.shape(), t2.shape(), 2)) {
+        return Tensor(kernels::scaled_matmul(alpha, t1.impl(), t2.impl()));
+    }
+    MatmulBroadcastInfo b_info = construct_matrix_broadcast_info(t1.impl(), t2.impl());
+    return Tensor(kernels::scaled_matmul_broadcast(alpha, t1.impl(), t2.impl(), b_info));
 }
 void ScaledMatMulOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), reduce_to_shape(kernels::scalar_mul(alpha, kernels::matmul(out->grad->impl(), kernels::transpose(b, 0, 1))), a->shape));
+    }
+    if (b->requires_grad) {
+        kernels::add_inplace(b->grad->impl(), reduce_to_shape(kernels::scalar_mul(alpha, kernels::matmul(kernels::transpose(a, 0, 1), out->grad->impl())), b->shape));
+    }
 }
 std::vector<std::shared_ptr<const TensorImpl>> ScaledMatMulOp::inputs() {
     return {a, b};
@@ -168,18 +181,22 @@ MMAddOp::MMAddOp(const Tensor& t1, const Tensor& t2, const Tensor& t3, const Ten
     out = t4.impl();
 }
 Tensor MMAddOp::forward(const Tensor& t1, const Tensor& t2, const Tensor& t3) {
-    return Tensor(kernels::mmadd(t1.impl(), t2.impl(), t3.impl()));
+    if (check_shape_match(t1.shape(), t2.shape(), 2) && check_shape_match(t1.shape(), t3.shape(), 2)) {
+        return Tensor(kernels::mmadd(t1.impl(), t2.impl(), t3.impl()));
+    }
+    MatmulBroadcastInfo b_info = construct_matrix_broadcast_info(t1.impl(), t2.impl(), t3.impl());
+    return Tensor(kernels::mmadd_broadcast(t1.impl(), t2.impl(), t3.impl(), b_info));
 }
 void MMAddOp::backward() {
-    // if (a->requires_grad) {
-    //     kernels::add_inplace(a->grad->impl(), kernels::matmul(out->grad->impl(), kernels::transpose(b, 0, 1)));
-    // }
-    // if (b->requires_grad) {
-    //     kernels::add_inplace(b->grad->impl(), kernels::matmul(kernels::transpose(a, 0, 1), out->grad->impl()));
-    // }
-    // if (c->requires_grad) {
-    //     kernels::add_inplace(c->grad->impl(), out->grad->impl());
-    // }
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), reduce_to_shape(kernels::matmul(out->grad->impl(), kernels::transpose(b, 0, 1)), a->shape));
+    }
+    if (b->requires_grad) {
+        kernels::add_inplace(b->grad->impl(), reduce_to_shape(kernels::matmul(kernels::transpose(a, 0, 1), out->grad->impl()), b->shape));
+    }
+    if (c->requires_grad) {
+        kernels::add_inplace(c->grad->impl(), reduce_to_shape(out->grad->impl(), c->shape));
+    }
 }
 std::vector<std::shared_ptr<const TensorImpl>> MMAddOp::inputs() {
     return {a, b, c};
@@ -192,9 +209,22 @@ MMAddGeneralOp::MMAddGeneralOp(float alpha, const Tensor& t1, const Tensor& t2, 
     out = t4.impl();
 }
 Tensor MMAddGeneralOp::forward(float alpha, const Tensor& t1, const Tensor& t2, float beta, const Tensor& t3) {
-    return Tensor(kernels::mmadd_general(alpha, t1.impl(), t2.impl(), beta, t3.impl()));
+    if (check_shape_match(t1.shape(), t2.shape(), 2) && check_shape_match(t1.shape(), t3.shape(), 2)) {
+        return Tensor(kernels::mmadd_general(alpha, t1.impl(), t2.impl(), beta, t3.impl()));
+    }
+    MatmulBroadcastInfo b_info = construct_matrix_broadcast_info(t1.impl(), t2.impl(), t3.impl());
+    return Tensor(kernels::mmadd_general_broadcast(alpha, t1.impl(), t2.impl(), beta, t3.impl(), b_info));
 }
 void MMAddGeneralOp::backward() {
+    if (a->requires_grad) {
+        kernels::add_inplace(a->grad->impl(), reduce_to_shape(kernels::scalar_mul(alpha, kernels::matmul(out->grad->impl(), kernels::transpose(b, 0, 1))), a->shape));
+    }
+    if (b->requires_grad) {
+        kernels::add_inplace(b->grad->impl(), reduce_to_shape(kernels::scalar_mul(alpha, kernels::matmul(kernels::transpose(a, 0, 1), out->grad->impl())), b->shape));
+    }
+    if (c->requires_grad) {
+        kernels::add_inplace(c->grad->impl(), reduce_to_shape(kernels::scalar_mul(beta, out->grad->impl()), c->shape));
+    }
 }
 std::vector<std::shared_ptr<const TensorImpl>> MMAddGeneralOp::inputs() {
     return {a, b, c};
