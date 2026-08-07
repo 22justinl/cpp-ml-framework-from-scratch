@@ -20,38 +20,66 @@ constexpr size_t M_c = 512;  // M cache block size
 constexpr size_t N_c = 1024;  // N cache block size
 constexpr size_t K_c = 256;  // K cache block size
 
+#define KERNEL_4x16_AVX2_FMA
+
+#if defined(KERNEL_SCALAR)
+#define MICROKERNEL kernel_scalar
 // Best register block sizes for scalar kernel + auto-vectorization (AVX2, MFA)
-// constexpr size_t M_r = 32;    // M register block size
-// constexpr size_t N_r = 32;    // N register block size
+constexpr size_t M_r = 32;    // M register block size
+constexpr size_t N_r = 32;    // N register block size
+constexpr size_t buffer_alignment = 4;
 
-// 4x4 SSE kernel register block size
-// constexpr size_t M_r = 4;
-// constexpr size_t N_r = 4;
+#elif defined(KERNEL_4x4_SSE)
+// 4x4 SSE kernel
+#define MICROKERNEL kernel_4x4_sse
+constexpr size_t M_r = 4;
+constexpr size_t N_r = 4;
+constexpr size_t buffer_alignment = 16;
 
-// 4x8 SSE kernel register block size
-// constexpr size_t M_r = 4;
-// constexpr size_t N_r = 8;
+#elif defined(KERNEL_4x8_SSE)
+// 4x8 SSE kernel
+#define MICROKERNEL kernel_4x8_sse
+constexpr size_t M_r = 4;
+constexpr size_t N_r = 8;
+constexpr size_t buffer_alignment = 16;
 
-// 8x4 SSE kernel register block size
-// constexpr size_t M_r = 8;
-// constexpr size_t N_r = 4;
+#elif defined(KERNEL_8x4_SSE)
+// 8x4 SSE kernel
+#define MICROKERNEL kernel_8x4_sse
+constexpr size_t M_r = 8;
+constexpr size_t N_r = 4;
+constexpr size_t buffer_alignment = 16;
 
-// 8x8 AVX kernel register block size
-// constexpr size_t M_r = 8;
-// constexpr size_t N_r = 8;
+#elif defined(KERNEL_8x8_AVX)
+// 8x8 AVX kernel
+#define MICROKERNEL kernel_8x8_avx
+constexpr size_t M_r = 8;
+constexpr size_t N_r = 8;
+constexpr size_t buffer_alignment = 32;
 
-// 8x8 AVX2 FMA kernel register block size
-// constexpr size_t M_r = 8;
-// constexpr size_t N_r = 8;
+#elif defined(KERNEL_8x8_AVX2_FMA)
+// 8x8 AVX2 FMA kernel
+#define MICROKERNEL kernel_8x8_avx2_fma
+constexpr size_t M_r = 8;
+constexpr size_t N_r = 8;
+constexpr size_t buffer_alignment = 32;
 
-// 16x8 AVX2 FMA kernel register block size
-// constexpr size_t M_r = 16;
-// constexpr size_t N_r = 8;
+#elif defined(KERNEL_16x8_AVX2_FMA)
+// 16x8 AVX2 FMA kernel
+#define MICROKERNEL kernel_16x8_avx2_fma
+constexpr size_t M_r = 16;
+constexpr size_t N_r = 8;
+constexpr size_t buffer_alignment = 32;
 
-// 4x16 AVX2 FMA kernel register block size
+#elif defined(KERNEL_4x16_AVX2_FMA)
+// 4x16 AVX2 FMA kernel
+#define MICROKERNEL kernel_4x16_avx2_fma
 constexpr size_t M_r = 4;
 constexpr size_t N_r = 16;
 constexpr size_t buffer_alignment = 32;
+#else
+#error "Unknown GEMM Microkernel"
+#endif
 
 void pack_a(float* a, const size_t kc, const size_t mc, const size_t row_stride, const size_t col_stride, float _a[K_c*M_c]);
 void pack_a_t(float* a_t, const size_t kc, const size_t mc, const size_t row_stride, const size_t col_stride, float _a[K_c*M_c]);
@@ -59,34 +87,15 @@ void pack_a_t_contiguous(float* a_t, const size_t kc, const size_t mc, const siz
 void pack_b(float* b, const size_t kc, const size_t nc, const size_t row_stride, const size_t col_stride, float _b[K_c*N_c]);
 void pack_b_contiguous(float* b, const size_t kc, const size_t nc, const size_t row_stride, float _b[K_c*N_c]);
 
-void kernel_default(
+void kernel_scalar(
         float* _a, float* _b, float* c_rblock,
-        size_t kc, size_t mr, size_t nr, size_t c_row_stride
-        );
-void kernel_4x4_sse(
-        float* _a, float* _b, float* c_rblock,
-        size_t kc, size_t mr, size_t nr, size_t c_row_stride
-        );
-void kernel_4x8_sse(
-        float* _a, float* _b, float* c_rblock,
-        size_t kc, size_t mr, size_t nr, size_t c_row_stride
-        );
-void kernel_8x4_sse(
-        float* _a, float* _b, float* c_rblock,
-        size_t kc, size_t mr, size_t nr, size_t c_row_stride
-        );
-void kernel_8x8_avx(
-        float* _a, float* _b, float* c_rblock,
-        size_t kc, size_t mr, size_t nr, size_t c_row_stride
-        );
-void kernel_8x8_avx2_fma(
-        float* _a, float* _b, float* c_rblock,
-        size_t kc, size_t mr, size_t nr, size_t c_row_stride
-        );
-void kernel_16x8_avx2_fma(
-        float* _a, float* _b, float* c_rblock,
-        size_t kc, size_t mr, size_t nr, size_t c_row_stride
-        );
+        size_t kc, size_t mr, size_t nr);
+void kernel_4x4_sse(float* _a, float* _b, float* c_rblock, size_t kc);
+void kernel_4x8_sse(float* _a, float* _b, float* c_rblock, size_t kc);
+void kernel_8x4_sse(float* _a, float* _b, float* c_rblock, size_t kc);
+void kernel_8x8_avx(float* _a, float* _b, float* c_rblock, size_t kc);
+void kernel_8x8_avx2_fma(float* _a, float* _b, float* c_rblock, size_t kc);
+void kernel_16x8_avx2_fma(float* _a, float* _b, float* c_rblock, size_t kc);
 void kernel_4x16_avx2_fma(float* _a, float* _b, float* c_rblock, size_t kc);
 
 shared_ptr<TensorImpl> matmul(shared_ptr<const TensorImpl> a, shared_ptr<const TensorImpl> b);
@@ -96,7 +105,8 @@ shared_ptr<TensorImpl> mmadd_general(float alpha, shared_ptr<const TensorImpl> a
 
 // process one pair of cache blocks
 template<MacrokernelCase Case>
-void macrokernel(size_t mc, size_t nc, size_t kc,
+void macrokernel(
+        size_t mc, size_t nc, size_t kc,
         float alpha, float beta,
         float* _a, float* _b, float* _c,
         float* c_block, size_t c_row_stride, size_t c_col_stride) {
@@ -121,7 +131,12 @@ void macrokernel(size_t mc, size_t nc, size_t kc,
             // Array start pointers:
             // _a+mm*kc*M_r =                   ptr to packed kcxM_r register block mm
             // _b+nn*kc*N_r =                   ptr to packed kcxN_r register block nn
-            kernel_4x16_avx2_fma(_a+mm*kc*M_r, _b+nn*kc*N_r, _c, kc);
+#ifdef KERNEL_SCALAR
+            MICROKERNEL(_a+mm*kc*M_r, _b+nn*kc*N_r, _c, kc, mr, nr);
+#else
+            MICROKERNEL(_a+mm*kc*M_r, _b+nn*kc*N_r, _c, kc);
+#endif
+
             for (size_t m = 0; m < mr; ++m) {
                 for (size_t n = 0; n < nr; ++n) {
                     if constexpr (Case == MacrokernelCase::BetaScaledAdd) {
