@@ -31,11 +31,11 @@ bool check_tensor_equal(const Tensor& t1, const Tensor& t2, float eps) {
     return true;
 }
 
-bool check_shape_match(const std::vector<size_t> shape1, const std::vector<size_t> shape2) {
+bool check_shape_match(const std::vector<size_t> shape1, const std::vector<size_t> shape2, size_t ignore_suffix_count) {
     if (shape1.size() != shape2.size()) {
         return false;
     }
-    for (size_t i = 0; i < shape1.size(); ++i) {
+    for (size_t i = 0; i < shape1.size()-ignore_suffix_count; ++i) {
         if (shape1[i] != shape2[i]) {
             return false;
         }
@@ -167,6 +167,25 @@ void increment_offset_binary_op(std::vector<size_t>& idx, const std::vector<size
         a_offset -= a_strides[dim]*(shape[dim]-1);
         b_offset -= b_strides[dim]*(shape[dim]-1);
         res_offset -= res_strides[dim]*(shape[dim]-1);
+        idx[dim] = 0;
+    }
+}
+
+void increment_offset_matmul_op(std::vector<size_t>& idx, const std::vector<size_t>& shape,
+        size_t& a_offset, const std::vector<size_t>& a_strides,
+        size_t& b_offset, const std::vector<size_t>& b_strides,
+        size_t& c_offset, const std::vector<size_t>& c_strides) {
+    for (size_t dim = shape.size()-2; dim -- > 0;) {
+        if (idx[dim]+1 < shape[dim]) {
+            idx[dim] += 1;
+            a_offset += a_strides[dim];
+            b_offset += b_strides[dim];
+            c_offset += c_strides[dim];
+            return;
+        }
+        a_offset -= a_strides[dim]*(shape[dim]-1);
+        b_offset -= b_strides[dim]*(shape[dim]-1);
+        c_offset -= c_strides[dim]*(shape[dim]-1);
         idx[dim] = 0;
     }
 }
