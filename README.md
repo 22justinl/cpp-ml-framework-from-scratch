@@ -50,3 +50,35 @@ Best kernel: AVX2 + FMA (4x16)
 Best time after tuning parameters: 2.7848s
 
 Best parameters: $M_c=512, N_c=1024, K_c=256, M_r=4, N_r=16$
+
+## Tasks
+- [x] Add, sub, mul, div, matmul, etc.
+- [x] Autograd
+- [x] Math functions
+- [x] Reduction operations
+- [x] Activation functions
+- [x] Loss functions
+- [x] Broadcasting
+- [x] Neural network abstraction
+- [x] Optimizers
+- [x] Tensor data storage
+- [x] View, reshape
+- [x] Slicing
+- [x] Data ingestion
+- [x] Train MLP on MNIST digits
+- [ ] Storing/loading models
+- [x] Matmul cache blocking
+- [x] Naive GEMM Implementation
+- [x] Matrix packing
+- [x] SIMD Microkernels
+- [x] Tuning GEMM parameters
+- [x] kernels for matmul, scaled_matmul, mmadd, mmadd_general (GEMM)
+- [x] nD GEMM functions
+- [x] nD GEMM functions broadcasting
+- [ ] **Tensor iteration overhaul (using ideas from PyTorch TensorIterator)**
+- [ ] TensorIterator optimization (coalescing, reordering dimensions, etc.)
+- [ ] Refactor all operations to use TensorIterator
+- [ ] Matmul multithreading
+- [ ] Initial convolutional layer implementation
+- [ ] Train CNN
+- [ ] Optimize convolutional layer
