@@ -12,10 +12,11 @@ Run MNIST Digit MLP example: `./build/mnist_digit_mlp`
 Time matrix multiplication: `time ./build/matmul4096`
 
 ## Overview
-<img width="1188" height="760" alt="C++ ML Framework Overview" src="https://github.com/user-attachments/assets/4aa35986-9a33-4291-91d0-1bf0fbd9522c" />
+
+<img width="2646" height="1687" alt="C++ ML Framework Overview" src="https://github.com/user-attachments/assets/7ff22f60-2d19-473e-a4ca-3bcfb24e9f79" />
 
 ### Matrix Multiplication Algorithm Overview
-<img width="1410" height="747" alt="BLAS GEMM Overview" src="https://github.com/user-attachments/assets/ef01881a-c47a-4c2f-bc42-828eb3b16c95" />
+<img width="3639" height="1899" alt="BLAS GEMM Overview" src="https://github.com/user-attachments/assets/13573f74-1a7a-41b8-94c3-9b7ef436a4d6" />
 
 ## Matrix Multiplication Rough Benchmarks
 
